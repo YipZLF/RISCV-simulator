@@ -74,7 +74,7 @@ int loadELF(CPU* cpu, FILE* elf_file){
 
   //assign heap pointer;
   cpu->setStackPtr(MEMORY_SIZE);//assign stack pointer;
-  cpu->setEntry(0x10180);//elf_hdr.e_entry);//set entry point;
+  cpu->setEntry(elf_hdr.e_entry);//set entry point;
   printf("CPU pc:%lx\n",elf_hdr.e_entry);
   fclose(elf_file);
   return 0;
@@ -107,7 +107,7 @@ int main(int argc, char ** argv){
      // cpu->printReg();
       break;
     }else if(status==HALT){
-      printf("CPU halts.\n");
+      printf("CPU halts. Simulation finished!\n");
       // print stats
       break;
     }

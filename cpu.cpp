@@ -17,6 +17,7 @@
 #define OP_LUI 0x37
 #define OP_R_W 0x3b // rv64i only
 #define OP_IMM_W 0x1b //rv64i only
+#define OP_ECALL 0x73 // system call
 
 
 #define ALU_ADD 0x1
@@ -87,8 +88,8 @@ unsigned int getBits(uint_t instr, int s,int e){
   int shift = sizeof(uint_t) * 8 - 1 - e;
   return ((instr<<shift)>>(shift + s));
 }
-long int signExtend(uint_t imm,uint_t imm_size){
-  int tmp = (int)imm; 
+int64_t signExtend(uint_t imm,uint_t imm_size){
+  int64_t tmp = (int64_t)imm; 
   int shift = sizeof(long unsigned int) * 8 - imm_size;
   tmp = ((tmp << shift)>>shift);
   return tmp;
@@ -131,29 +132,28 @@ int CPU::step(){
   // IF: fetch the instruction;
   uint_t cur_instr;
   memcpy((void *)&cur_instr, (memory->mem + pc) , INSTR_SIZE);
-  if(cur_instr==0) return -1;
-  //cur_instr = swapEndian32(cur_instr);
   #ifdef DEBUG
   printf("\nPC:%lx,  Instr:%x\n",this->pc,cur_instr);
   #endif
+  if(cur_instr==0) return -1;
+  //cur_instr = swapEndian32(cur_instr);
+
   uint64_t pc_next = pc + 4,pc_branch;
 
   
   // ID : decode
-  
   // Control signals:
   uint_t opcode = getBits(cur_instr,0,6);
-  uint_t alu_op = 0,//alu operation
+  uint_t alu_op = 0,// alu operation
          mem_op = 0, //memory operation
-         wb_op = 0, //wb operation
-         b_op= 0, //how branch is decided
+         wb_op = 0, // wb operation
+         b_op= 0, // branch operation
          use_imm = 0,//
-         use_mem = 0,
-         pc_source = 0,// if to write pc back to regs, determine the source
-         load_type = 0,
+         pc_source = 0, // if to write pc back to regs, determine the source
+         load_type = 0, 
          store_type = 0,
          operand_type = 0;
-  uint64_t s1= 0,s2 = 0,imm = 0; // source data 1 and 2
+  int64_t s1= 0,s2 = 0,imm = 0; // source data 1 and 2
   uint_t funct3=0,funct7=0,rs1=0,rs2=0,rd=0;
   uint_t imm_size = 0;
   switch(opcode){
@@ -168,7 +168,6 @@ int CPU::step(){
       b_op = NOP;
       operand_type = DOUBLE;
       use_imm = FALSE;
-      use_mem = FALSE;
       s1 = regfile->greg[rs1];
       s2 = regfile->greg[rs2];
       switch(funct3){
@@ -193,110 +192,110 @@ int CPU::step(){
               printf("Instruction not supported!\n");
               return -1;
           }
+          break;
+        }
+        case 0x1:{
+          switch(funct7){
+            case 0x00: alu_op = ALU_SLL;
+              #ifdef DEBUG
+              printf(" - ID: sll %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            case 0x01: alu_op = ALU_MULH;
+              #ifdef DEBUG
+              printf(" - ID: mulh %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            default:
+              printf("Instruction not supported!\n");
+              return -1;
+            }
+          break;
+        }
+        case 0x2:{
+          switch(funct7){
+            case 0x00: alu_op = ALU_SLT;
+              #ifdef DEBUG
+              printf(" - ID: slt %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            default:
+              printf("Instruction not supported!\n");
+              return -1;
+            }
+          break;
+        }
+        case 0x4:{
+          switch(funct7){
+            case 0x00: alu_op = ALU_XOR;
+              #ifdef DEBUG
+              printf(" - ID: xor %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            case 0x01: alu_op = ALU_DIV;
+              #ifdef DEBUG
+              printf(" - ID: div %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            default:
+              printf("Instruction not supported!\n");
+              return -1;
+            }
+          break;
+        }
+        case 0x5:{
+          switch(funct7){
+            case 0x00: alu_op = ALU_SRL;
+              #ifdef DEBUG
+              printf(" - ID: srl %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            case 0x20: alu_op = ALU_SRA;
+              #ifdef DEBUG
+              printf(" - ID: sra %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            default:
+              printf("Instruction not supported!\n");
+              return -1;
+            }
+          break;
+        }
+        case 0x6:{
+          switch(funct7){
+            case 0x00: alu_op = ALU_OR;
+              #ifdef DEBUG
+              printf(" - ID: or %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            case 0x01: alu_op = ALU_REM;
+              #ifdef DEBUG
+              printf(" - ID: rem %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            default:
+              printf("Instruction not supported!\n");
+              return -1;
+            }
+          break;
+        }
+        case 0x7:{
+          switch(funct7){
+            case 0x00: alu_op = ALU_AND;
+              #ifdef DEBUG
+              printf(" - ID: and %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            default:
+              printf("Instruction not supported!\n");
+              return -1;
+            }
+          break;
+        }
+        default: 
+        printf("Instruction not supported!\n");
+        return -1;
         break;
-      }
-      case 0x1:{
-        switch(funct7){
-          case 0x00: alu_op = ALU_SLL;
-            #ifdef DEBUG
-            printf(" - ID: sll %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          case 0x01: alu_op = ALU_MULH;
-            #ifdef DEBUG
-            printf(" - ID: mulh %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          default:
-            printf("Instruction not supported!\n");
-            return -1;
-          }
-        break;
-      }
-      case 0x2:{
-        switch(funct7){
-          case 0x00: alu_op = ALU_SLT;
-            #ifdef DEBUG
-            printf(" - ID: slt %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          default:
-            printf("Instruction not supported!\n");
-            return -1;
-          }
-        break;
-      }
-      case 0x4:{
-        switch(funct7){
-          case 0x00: alu_op = ALU_XOR;
-            #ifdef DEBUG
-            printf(" - ID: xor %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          case 0x01: alu_op = ALU_DIV;
-            #ifdef DEBUG
-            printf(" - ID: div %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          default:
-            printf("Instruction not supported!\n");
-            return -1;
-          }
-        break;
-      }
-      case 0x5:{
-        switch(funct7){
-          case 0x00: alu_op = ALU_SRL;
-            #ifdef DEBUG
-            printf(" - ID: srl %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          case 0x20: alu_op = ALU_SRA;
-            #ifdef DEBUG
-            printf(" - ID: sra %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          default:
-            printf("Instruction not supported!\n");
-            return -1;
-          }
-        break;
-      }
-      case 0x6:{
-        switch(funct7){
-          case 0x00: alu_op = ALU_OR;
-            #ifdef DEBUG
-            printf(" - ID: or %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          case 0x01: alu_op = ALU_REM;
-            #ifdef DEBUG
-            printf(" - ID: rem %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          default:
-            printf("Instruction not supported!\n");
-            return -1;
-          }
-        break;
-      }
-      case 0x7:{
-        switch(funct7){
-          case 0x00: alu_op = ALU_AND;
-            #ifdef DEBUG
-            printf(" - ID: and %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          default:
-            printf("Instruction not supported!\n");
-            return -1;
-          }
-        break;
-      }
-      default: 
-      printf("Instruction not supported!\n");
-      return -1;
-      break;
       }
       break;
     }
@@ -311,7 +310,6 @@ int CPU::step(){
       b_op = NOP;
       operand_type = WORD;
       use_imm = FALSE;
-      use_mem = FALSE;
       s1 = regfile->greg[rs1];
       s2 = regfile->greg[rs2];
       switch(funct3){
@@ -332,42 +330,42 @@ int CPU::step(){
               return -1;
           }
         break;
-      }
-      case 0x1:{
-        switch(funct7){
-          case 0x00: alu_op = ALU_SLL;
-            #ifdef DEBUG
-            printf(" - ID: sllw %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          default:
-            printf("Instruction not supported!\n");
-            return -1;
-          }
+        }
+        case 0x1:{
+          switch(funct7){
+            case 0x00: alu_op = ALU_SLL;
+              #ifdef DEBUG
+              printf(" - ID: sllw %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            default:
+              printf("Instruction not supported!\n");
+              return -1;
+            }
+          break;
+        }
+        case 0x5:{
+          switch(funct7){
+            case 0x00: alu_op = ALU_SRL;
+              #ifdef DEBUG
+              printf(" - ID: srlw %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            case 0x20: alu_op = ALU_SRA;
+              #ifdef DEBUG
+              printf(" - ID: sraw %u, %u, %u\n",rd,rs1,rs2);
+              #endif
+              break;
+            default:
+              printf("Instruction not supported!\n");
+              return -1;
+            }
+          break;
+        }
+        default: 
+          printf("Instruction not supported!\n");
+          return -1;
         break;
-      }
-      case 0x5:{
-        switch(funct7){
-          case 0x00: alu_op = ALU_SRL;
-            #ifdef DEBUG
-            printf(" - ID: srlw %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          case 0x20: alu_op = ALU_SRA;
-            #ifdef DEBUG
-            printf(" - ID: sraw %u, %u, %u\n",rd,rs1,rs2);
-            #endif
-            break;
-          default:
-            printf("Instruction not supported!\n");
-            return -1;
-          }
-        break;
-      }
-      default: 
-      printf("Instruction not supported!\n");
-      return -1;
-      break;
       }
       break;
     }
@@ -377,12 +375,10 @@ int CPU::step(){
       rd = getBits(cur_instr,7,11);
       imm = getBits(cur_instr,20,31);
       imm_size = 12;
-
       mem_op = NOP;
-      b_op = NOP;
       wb_op = WB_ALU;
+      b_op = NOP;
       use_imm = TRUE;
-      use_mem = FALSE;
       s1 = regfile->greg[rs1];
       s2 = imm;
       switch(funct3){
@@ -398,6 +394,7 @@ int CPU::step(){
           switch(funct7){
             case 0x00: alu_op = ALU_SLL;
               s2 = imm & 0x3f; // only imm[5:0]
+              imm_size = 6;
               #ifdef DEBUG
               printf(" - ID: slli %u, %u,$%ld\n",rd,rs1,signExtend(imm,imm_size));
               #endif
@@ -427,12 +424,14 @@ int CPU::step(){
           switch(funct7){
             case 0x00: alu_op = ALU_SRL;
               s2 = imm & 0x3f; // only imm[5:0]
+              imm_size = 6;
               #ifdef DEBUG
               printf(" - ID: srli %u, %u, $%ld\n",rd,rs1,signExtend(imm,imm_size));
               #endif
               break;
             case 0x10: alu_op = ALU_SRA;
               s2 = imm & 0x3f; // only imm[5:0]
+              imm_size = 6;
               #ifdef DEBUG
               printf(" - ID: srai %u, %u, $%ld\n",rd,rs1,signExtend(imm,imm_size));
               #endif
@@ -471,7 +470,6 @@ int CPU::step(){
       b_op = NOP;
       wb_op = WB_ALU;
       use_imm = TRUE;
-      use_mem = FALSE;
       s1 = regfile->greg[rs1];
       s2 = imm;
       switch(funct3){
@@ -487,6 +485,7 @@ int CPU::step(){
           switch(funct7){
             case 0x00: alu_op = ALU_SLL;
               s2 = imm & 0x3f; // only imm[5:0]
+              imm_size = 6;
               #ifdef DEBUG
               printf(" - ID: slli %u, %u,$%ld\n",rd,rs1,signExtend(imm,imm_size));
               #endif
@@ -502,6 +501,7 @@ int CPU::step(){
           switch(funct7){
             case 0x00: alu_op = ALU_SRL;
               s2 = imm & 0x3f; // only imm[5:0]
+              imm_size = 6;
               #ifdef DEBUG
               printf(" - ID: srliw %u, %u, $%ld\n",rd,rs1,signExtend(imm,imm_size));
               #endif
@@ -532,7 +532,6 @@ int CPU::step(){
       b_op = NOP;
       wb_op = WB_MEM;
       use_imm = TRUE;
-      use_mem = TRUE;
       s1 = regfile->greg[rs1];
       s2 = imm;
       switch(funct3){
@@ -601,7 +600,6 @@ int CPU::step(){
       mem_op = NOP;
       wb_op = NOP;
       use_imm = FALSE;
-      use_mem = FALSE;
       s1 = regfile->greg[rs1];
       s2 = regfile->greg[rs2];
       switch(funct3){
@@ -672,7 +670,6 @@ int CPU::step(){
       wb_op = NOP;
       b_op = NOP;
       use_imm = TRUE;
-      use_mem = FALSE;
       s1 = regfile->greg[rs1];
       s2 = regfile->greg[rs2];
       switch(funct3){
@@ -712,31 +709,29 @@ int CPU::step(){
       rd = getBits(cur_instr,7,11);
       imm = (getBits(cur_instr,12,31) << 12);
       imm_size = 32;
-      #ifdef DEBUG
-      printf(" - ID: auipc %u, $%ld\n",rd, (long)getBits(cur_instr,12,31));
-      #endif
       alu_op = ALU_ADD;
       mem_op = NOP;
       wb_op = WB_PC;
       b_op = NOP;
       pc_source = PC_IMM;
       use_imm = TRUE;
-      use_mem = FALSE;
+      #ifdef DEBUG
+      printf(" - ID: auipc %u, $%ld\n",rd, (long)getBits(cur_instr,12,31));
+      #endif
       break;
     } 
     case OP_LUI:{
       rd = getBits(cur_instr,7,11);
       imm = (getBits(cur_instr,12,31) << 12);
       imm_size = 32;
-      #ifdef DEBUG
-      printf(" - ID: lui %u, $%ld\n",rd, (long)getBits(cur_instr,12,31));
-      #endif
       alu_op = NOP;
       mem_op = NOP;
       wb_op = WB_IMM;
       b_op = NOP;
       use_imm = TRUE;
-      use_mem = FALSE;
+      #ifdef DEBUG
+      printf(" - ID: lui %u, $%ld\n",rd, (long)getBits(cur_instr,12,31));
+      #endif
       break;
     }
     case OP_UJ:{
@@ -745,16 +740,15 @@ int CPU::step(){
             (getBits(cur_instr,20,20) << 11) + 
             (getBits(cur_instr,12,19) << 12) + 
             (getBits(cur_instr,31,31) << 20);
-      
       imm_size = 21;
-      #ifdef DEBUG
-      printf(" - ID: jal %u, %lx\n",rd, (long)imm+this->pc);
-      #endif
       mem_op = NOP;
       alu_op = NOP;
       wb_op = WB_PC;
       pc_source = PC_NEXT;
       b_op = JAL;
+      #ifdef DEBUG
+      printf(" - ID: jal %u, %lx\n",rd, (long)imm+this->pc);
+      #endif
       break;
     }
     case OP_JALR:{
@@ -775,12 +769,18 @@ int CPU::step(){
       #endif
       break;
     }
+    case OP_ECALL:{
+      if( cur_instr!= 0x73 ) return -1;
+      if( this->regfile->greg[A7]==1) return -2;
+      break;
+    }
     default: { 
       printf("Instruction not supported!\n");
       return -1;
       break;
     }
   }
+
   imm = signExtend(imm,imm_size);
 
   // EX
@@ -797,10 +797,10 @@ int CPU::step(){
     case ALU_MULH: {
       __int128_t tmp = s1* s2;
       alu_d = tmp >> 64; break;}
-    case ALU_SLT: alu_d = (s1 < s2)? 1: 0; break;
+    case ALU_SLT: alu_d = ((int64_t)s1 < (int64_t)s2)? 1: 0; break;
     case ALU_XOR: alu_d = s1 ^ s2; break;
     case ALU_DIV: alu_d = s1 / s2; break;
-    case ALU_SRL: alu_d = (uint64_t)s1 >> (uint64_t)s2; break;
+    case ALU_SRL: alu_d = (uint64_t)s1 >> (int64_t)s2; break;
     case ALU_SRA: alu_d = (int64_t) s1 >> (int64_t)s2; break;
     case ALU_OR: alu_d = s1 | s2; break;
     case ALU_REM: alu_d = s1 % s2; break;
@@ -819,7 +819,9 @@ int CPU::step(){
     pc_d = pc+imm;
   }
   
+  #ifdef DEBUG
   if(b_op != NOP) printf("    - tobranch?: %d %d %d\n",toBranch(b_op,alu_d),b_op,alu_d);
+  #endif
   if(toBranch(b_op,alu_d)) {
     if(b_op == JALR) pc = (alu_d & (~((uint64_t)1)));
     else pc = pc + imm; 
@@ -830,6 +832,15 @@ int CPU::step(){
   
 
   // MEM
+  #ifdef DEBUG
+  if(mem_op != NOP){
+    printf("    - Mem content check(before): \n      ");
+    for(int i = 0 ;i < 8 ;++i){
+      printf("%02x ", memory->mem[(uint64_t)alu_d+i]);
+    }
+    printf("\n");
+  }
+  #endif
   uint64_t mem_d = 0;
   int64_t mem_s = 0;
   switch(mem_op){
@@ -843,14 +854,19 @@ int CPU::step(){
     }
     case MWRITE:{
       mem_s = regfile->greg[rs2];
+      int store_size= 0;
       switch(store_type){
-        case SBYTE: mem_s &= 0xff; break;
+        case SBYTE: store_size = 1; break;
+        case SHALF: store_size = 2; break;
+        case SWORD: store_size = 4; break;
+        case SDOUBLE: store_size = 8;break;
+        /*case SBYTE: mem_s &= 0xff; break;
         case SHALF: mem_s &= 0xffff; break;
         case SWORD: mem_s &= 0xffffffff; break;
-        case SDOUBLE:break;
+        case SDOUBLE:break;*/
         default: printf(" store type error!\n"); return -1;
       }
-      memcpy( &memory->mem[(uint64_t)alu_d],&mem_s, sizeof(uint64_t));
+      memcpy( &memory->mem[(uint64_t)alu_d],&mem_s, store_size);
       //memory->mem[alu_d] = mem_s;
       #ifdef DEBUG
       printf(" - MEM: store data: 0x%lx at addr: 0x%lx\n",(uint64_t)mem_s,(uint64_t)alu_d);
@@ -861,13 +877,21 @@ int CPU::step(){
       break;
     }
   }
-
+  #ifdef DEBUG
+  if(mem_op != NOP){
+    printf("    - Mem content check(after): \n      ");
+    for(int i = 0 ;i < 8 ;++i){
+      printf("%02x ", memory->mem[(uint64_t)alu_d+i]);
+    }
+    printf("\n");
+  }
+  #endif
   // WB
   if(rd != ZERO){
     switch(wb_op){
       case WB_ALU:  {
         switch(operand_type){
-          case WORD: alu_d &= 0xffffffff; break;
+          case WORD: alu_d = signExtend(alu_d & 0xffffffff, 32); break;
           default:break;
         }
         regfile->greg[rd] = alu_d; break;
