@@ -1,250 +1,145 @@
-#include "Simulation.h"
-using namespace std;
+/* sim.cpp - the simulation of a RISCV cpp
+ * Author: Ye Zilingfeng
+ */
 
-extern void read_elf();
-extern unsigned int cadr;
-extern unsigned int csize;
-extern unsigned int vadr;
-extern unsigned long long gp;
-extern unsigned int madr;
-extern unsigned int endPC;
-extern unsigned int entry;
-extern FILE *file;
+#ifndef MACRO_H
+#define MACRO_H
+  #include "macro.h"
+#endif
+
+#include"cpu.h"
+#include"loader.h"
 
 
-//指令运行数
-long long inst_num=0;
 
-//系统调用退出指示
-int exit_flag=0;
+bool single_step = true;
+bool print_log = true;
+bool verbose = true;
 
-//加载代码段
-//初始化PC
-void load_memory()
-{
-	fseek(file,cadr,SEEK_SET);
-	fread(&memory[vadr>>2],1,csize,file);
+int loadSegment(CPU* cpu,
+                FILE* fd, 
+                unsigned long offset, 
+                unsigned long filesz, 
+                unsigned long vaddr){
+  if(vaddr + filesz > MEMORY_SIZE){
+    printf("ERROR: memory too small! needed %lu but only got %d\n",vaddr+filesz, MEMORY_SIZE);
+    return ERROR;
+  }
+  fseek(fd, offset, SEEK_SET);
+  fread(cpu->memory->mem + vaddr, 1, filesz, fd);
+  #ifdef DEBUG
+  for(int j = 0 ;j < filesz; j+=8){
+    printf("@0x%lx:\t",vaddr+j);
+    for(int i = 0; i < 4; ++i)
+      printf("%02x%02x ",cpu->memory->mem[vaddr+j+i*2],cpu->memory->mem[vaddr+j+i*2+1]);
+    printf("\n");
+  }
+  #endif
 
-	vadr=vadr>>2;
-	csize=csize>>2;
-	fclose(file);
+  return 0;
 }
 
-int main()
-{
-	//解析elf文件
-	read_elf();
-	
-	//加载内存
-	load_memory();
+int loadELF(CPU* cpu, FILE* elf_file){
+  Elf64_Ehdr elf_hdr;
+  Elf64_Phdr elf_phdr;
 
-	//设置入口地址
-	PC=entry>>2;
-	
-	//设置全局数据段地址寄存器
-	reg[3]=gp;
-	
-	reg[2]=MAX/2;//栈基址 （sp寄存器）
+  memset(&elf_hdr, 0 ,sizeof(Elf64_Ehdr));
+  if( fread(&elf_hdr,1,sizeof(Elf64_Ehdr),elf_file) < sizeof(Elf64_Ehdr))
+    return ERROR; // sanity check;
 
-	simulate();
 
-	cout <<"simulate over!"<<endl;
+  // check elf header here
 
-	return 0;
+
+  int prog_cnt = elf_hdr.e_phnum;
+  int ph_off = elf_hdr.e_phoff;
+  int ph_size = elf_hdr.e_phentsize;
+
+  for(int id=0; id < prog_cnt; ++id){
+    memset(&elf_phdr, 0 ,sizeof(Elf64_Phdr));
+    fseek(elf_file, ph_off, SEEK_SET);
+
+    if( fread(&elf_phdr, 1, sizeof(Elf64_Phdr), elf_file) < sizeof(Elf64_Phdr)){
+      printf("Failed to read prog headers.\n");
+      return ERROR;
+    }
+
+    if( PT_LOAD == elf_phdr.p_type ){// if this seg should be loaded into mem
+      if(loadSegment(cpu, elf_file, elf_phdr.p_offset, elf_phdr.p_filesz, elf_phdr.p_vaddr) == ERROR)  {
+        printf("Failed to load segments\n");
+        return ERROR;
+      }
+    }
+    ph_off += elf_hdr.e_phentsize;
+  }
+
+  //assign heap pointer;
+  cpu->setStackPtr(MEMORY_SIZE);//assign stack pointer;
+  cpu->setEntry(elf_hdr.e_entry);//set entry point;
+  printf("CPU pc:%lx\n",elf_hdr.e_entry);
+  fclose(elf_file);
+  return 0;
 }
 
-void simulate()
-{
-	//结束PC的设置
-	int end=(int)endPC/4-1;
-	while(PC!=end)
-	{
-		//运行
-		IF();
-		ID();
-		EX();
-		MEM();
-		WB();
+int main(int argc, char ** argv){
+  // Get cmd arguments
+  // get file name from cmd args.
+  FILE* elf_file=fopen(argv[1],"r");
+  if(elf_file==NULL){
+    printf("Failed to open elf file\n");
+    return 0;
+  }
 
-		//更新中间寄存器
-		IF_ID=IF_ID_old;
-		ID_EX=ID_EX_old;
-		EX_MEM=EX_MEM_old;
-		MEM_WB=MEM_WB_old;
 
-        if(exit_flag==1)
+  // set up cpu
+  CPU * cpu = new CPU();
+
+  if(loadELF(cpu,elf_file) == ERROR){
+    printf("Load ELF file error!\n");
+    return 0;
+  };
+  int cnt = 0;
+  for(;;){// into loop, each loop means one tick of the clock
+    unsigned int status = cpu->step();
+    
+    cpu->printReg();
+    if(status==ERROR){
+      printf("CPU error!\n");
+     // cpu->printReg();
+      break;
+    }else if(status==HALT){
+      printf("CPU halts. Simulation finished!\n");
+      // print stats
+      break;
+    }
+    if(verbose){
+      //cpu->print_status();
+    }
+    if(cnt>1){
+      cnt --;
+      if(single_step){
+        char op;
+        if(scanf("%c",&op)==1){
+          if(op=='n'){
+            scanf("%d",&cnt);
+          }
+          if(op=='p'){
+          // scanf("%c",&op);
+            //if(op == 'r'){
+              int regnum=0;
+              scanf("%d",&regnum);
+              printf("reg[%d]=%ld \n",regnum,cpu->regfile->greg[regnum]);
+
+            //}
+          }
+          if(op == 'r'){
+          }
+          if(op=='c'){
             break;
-
-        reg[0]=0;//一直为零
-
-	}
-}
-
-
-//取指令
-void IF()
-{
-	//write IF_ID_old
-	IF_ID_old.inst=memory[PC];
-	PC=PC+1;
-	IF_ID_old.PC=PC;
-}
-
-//译码
-void ID()
-{
-	//Read IF_ID
-	unsigned int inst=IF_ID.inst;
-	int EXTop=0;
-	unsigned int EXTsrc=0;
-
-	char RegDst,ALUop,ALUSrc;
-	char Branch,MemRead,MemWrite;
-	char RegWrite,MemtoReg;
-
-	rd=getbit(inst,7,11);
-	fuc3=getbit(inst,0,0);
-	//....
-
-
-	if(OP==OP_R)
-	{
-		if(fuc3==F3_ADD&&fuc7==F7_ADD)
-		{
-            EXTop=0;
-			RegDst=0;
-			ALUop=0;
-			ALUSrc=0;
-			Branch=0;
-			MemRead=0;
-			MemWrite=0;
-			RegWrite=0;
-			MemtoReg=0;
-		}
-		else
-		{
-		   
-		}
-	}
-	else if(OP==OP_I)
-    {
-        if(fuc3==F3_ADDI)
-        {
-            
-        }
-        else
-        {
-           
-        }
+          }
+        };
+      }
     }
-    else if(OP==OP_SW)
-    {
-        if(fuc3==F3_SB)
-        {
-           
-        }
-        else
-        {
-           
-        }
-    }
-    else if(OP==OP_LW)
-    {
-        if(fuc3==F3_LB)
-        {
-			
-        }
-        else
-        {
-
-        }
-    }
-    else if(OP==OP_BEQ)
-    {
-        if(fuc3==F3_BEQ)
-        {
-			
-        }
-        else
-        {
-           
-        }
-    }
-    else if(OP==OP_JAL)
-    {
-        
-    }
-    else
-    {
-		
-    }
-
-	//write ID_EX_old
-	ID_EX_old.Rd=rd;
-	ID_EX_old.Rt=rt;
-	ID_EX_old.Imm=ext_signed(EXTsrc,EXTop);
-	//...
-
-	ID_EX_old.Ctrl_EX_ALUOp=ALUop;
-	//....
-
-}
-
-//执行
-void EX()
-{
-	//read ID_EX
-	int temp_PC=ID_EX.PC;
-	char RegDst=ID_EX.Ctrl_EX_RegDst;
-	char ALUOp=ID_EX.Ctrl_EX_ALUOp;
-
-	//Branch PC calulate
-	//...
-
-	//choose ALU input number
-	//...
-
-	//alu calculate
-	int Zero;
-	REG ALUout;
-	switch(ALUOp){
-	default:;
-	}
-
-	//choose reg dst address
-	int Reg_Dst;
-	if(RegDst)
-	{
-
-	}
-	else
-	{
-
-	}
-
-	//write EX_MEM_old
-	EX_MEM_old.ALU_out=ALUout;
-	EX_MEM_old.PC=temp_PC;
-    //.....
-}
-
-//访问存储器
-void MEM()
-{
-	//read EX_MEM
-
-	//complete Branch instruction PC change
-
-	//read / write memory
-
-	//write MEM_WB_old
-}
-
-
-//写回
-void WB()
-{
-	//read MEM_WB
-
-	//write reg
+  }
+  return 0;
 }

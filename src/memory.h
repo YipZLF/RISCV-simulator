@@ -1,15 +1,18 @@
 /* memory.h - the simulated RISCV memory
  * Author: Ye Zilingfeng
  */
-#include<cstring>
-#define MEMORY_SIZE 1<<20
+#ifndef MACRO_H
+#define MACRO_H
+  #include "macro.h"
+#endif
+
 struct Memory{
   char mem[MEMORY_SIZE];
   public:
-    void loadMemory(){
+    void resetMemory(){
     /*
     * contemporary implementation here!!
     */
-    memset(mem,0,sizeof(mem));
+      memset(mem,0,sizeof(mem));
     }
 };
