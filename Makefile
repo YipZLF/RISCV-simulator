@@ -150,6 +150,33 @@ src/cpu.cpp.s:
 	$(MAKE) -f CMakeFiles/sim.dir/build.make CMakeFiles/sim.dir/src/cpu.cpp.s
 .PHONY : src/cpu.cpp.s
 
+src/loader.o: src/loader.cpp.o
+
+.PHONY : src/loader.o
+
+# target to build an object file
+src/loader.cpp.o:
+	$(MAKE) -f CMakeFiles/sim.dir/build.make CMakeFiles/sim.dir/src/loader.cpp.o
+.PHONY : src/loader.cpp.o
+
+src/loader.i: src/loader.cpp.i
+
+.PHONY : src/loader.i
+
+# target to preprocess a source file
+src/loader.cpp.i:
+	$(MAKE) -f CMakeFiles/sim.dir/build.make CMakeFiles/sim.dir/src/loader.cpp.i
+.PHONY : src/loader.cpp.i
+
+src/loader.s: src/loader.cpp.s
+
+.PHONY : src/loader.s
+
+# target to generate assembly for a file
+src/loader.cpp.s:
+	$(MAKE) -f CMakeFiles/sim.dir/build.make CMakeFiles/sim.dir/src/loader.cpp.s
+.PHONY : src/loader.cpp.s
+
 src/sim.o: src/sim.cpp.o
 
 .PHONY : src/sim.o
@@ -189,6 +216,9 @@ help:
 	@echo "... src/cpu.o"
 	@echo "... src/cpu.i"
 	@echo "... src/cpu.s"
+	@echo "... src/loader.o"
+	@echo "... src/loader.i"
+	@echo "... src/loader.s"
 	@echo "... src/sim.o"
 	@echo "... src/sim.i"
 	@echo "... src/sim.s"

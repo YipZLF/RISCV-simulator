@@ -1,10 +1,10 @@
 /* cpu.h - the simulated RISCV cpu
  * Author: Ye Zilingfeng
  */
-#ifndef MACRO_H
-#define MACRO_H
-  #include "macro.h"
-#endif
+#ifndef CPU_H
+#define CPU_H
+#include "macro.h"
+
 
 #include "memory.h"
 
@@ -63,3 +63,4 @@ public:
     }
   #endif
 };
+#endif

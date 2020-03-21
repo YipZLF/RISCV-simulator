@@ -1,7 +1,10 @@
 /* loader.h - the simulated RISCV cpu loader.To read and analyze an ELF file.
  * Copied from reference code.
  */
-
+#ifndef LOADER_H
+#define LOADER_H
+#include "macro.h"
+#include "cpu.h"
 typedef unsigned long int64;
 typedef unsigned int int32;
 typedef unsigned short int16;
@@ -88,26 +91,11 @@ typedef struct
 } Elf64_Phdr;
 
 
-/*
-//代码段在解释文件中的偏移地址
-unsigned int cadr=0;
+int loadSegment(CPU* cpu,
+                FILE* fd, 
+                unsigned long offset, 
+                unsigned long filesz, 
+                unsigned long vaddr);
+int loadELF(CPU* cpu, FILE* elf_file);
 
-//代码段的长度
-unsigned int csize=0;
-
-//代码段在内存中的虚拟地址
-unsigned int vadr=0;
-
-//全局数据段在内存的地址
-unsigned long long gp=0;
-
-//main函数在内存中地址
-unsigned int madr=0;
-
-//程序结束时的PC
-unsigned int endPC=0;
-
-//程序的入口地址
-unsigned int entry=0;
-
-*/
+#endif

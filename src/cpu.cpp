@@ -1,9 +1,7 @@
 /* cpu.cpp - the simulated RISCV cpu
  * Author: Ye Zilingfeng
  */
-#include<cpu.h>
-//取指令
-
+#include "cpu.h"
 
 //utils:
 unsigned int getBits(uint_t instr, int s,int e){

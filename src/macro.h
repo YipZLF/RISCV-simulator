@@ -3,6 +3,8 @@
  * Author: Ye Zilingfeng
  */
 
+#ifndef MACRO_H
+#define MACRO_H
 #include<iostream>
 #include<cstdio>
 #include<cstring>
@@ -155,3 +157,5 @@ typedef long int int64_t;
 
 #define DONE 1
 #define EXECUTE 2
+
+#endif
