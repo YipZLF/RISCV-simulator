@@ -34,9 +34,9 @@ bool toBranch(uint_t b_op, uint64_t alu_d){
     case BGEU: return ((int64_t)alu_d >= 0)? true: false;
     case BGE: return ((int64_t)alu_d >= 0)? true: false;
     default: printf("Not implemented: branch logic.\n");break;
-  }
-  
+  } 
 }
+
 
 
 int CPU::step(){
@@ -689,9 +689,13 @@ int CPU::step(){
       #endif
       break;
     }
-    case OP_ECALL:{
+    case OP_ECALL:{      
+      #ifdef DEBUG
+      printf(" - ID: ecall\n");
+      #endif
       if( cur_instr!= 0x73 ) return -1;
       if( this->regfile->greg[A7]==1) return -2;
+
       break;
     }
     default: { 
@@ -740,7 +744,7 @@ int CPU::step(){
   }
   
   #ifdef DEBUG
-  if(b_op != NOP) printf("    - tobranch?: %d %d %d\n",toBranch(b_op,alu_d),b_op,alu_d);
+  if(b_op != NOP) printf("    - tobranch?: %d %ld %ld\n",toBranch(b_op,alu_d),(uint64_t)b_op,alu_d);
   #endif
   if(toBranch(b_op,alu_d)) {
     if(b_op == JALR) pc = (alu_d & (~((uint64_t)1)));
@@ -841,207 +845,483 @@ int CPU::step(){
   #endif
   return 0;
 }
-void CPU::IF()
-{
+
+int CPU::pl_step(){
+  int ret = 0;
+  ret = WB();
+  if(ret != 0) return ret;
+  ret = MEM();
+  if(ret != 0) return ret;
+  ret = EX();
+  if(ret != 0) return ret;
+  ret = ID();
+  if(ret != 0) return ret;
+  ret = IF();
+  if(ret != 0) return ret;
+  clk_cnt ++;
+  return ret = 0;
 }
 
-//译码
-void CPU::ID()
-{
+int CPU::IF(){
+  if(_f_b_pred_error){
+    memcpy((void *)&_f_instr, (memory->mem + pc) , INSTR_SIZE);
+    _f_pc = this->pc;
 
-} 
+    _f_b_pred_error = false;
+    _f_st = TICKING;
+    simClocksToFinish(_f_clk,CLK_IF);
 
-//执行
-void CPU::EX()
-{
-   //.....
-}
-
-//访问存储器
-void CPU::MEM()
-{
-	//read EX_MEM
-
-	//complete Branch instruction PC change
-
-	//read / write memory
-
-	//write MEM_WB_old
-}
-
-
-//写回
-void CPU::WB()
-{
-	//read MEM_WB
-
-	//write reg
-}
-/*
-//取指令
-void CPU::IF()
-{
-	//write IF_ID_old
-	IF_ID_old.inst=memory[PC];
-	PC=PC+1;
-	IF_ID_old.PC=PC;
-}
-
-//译码
-void CPU::ID()
-{
-	//Read IF_ID
-	unsigned int inst=IF_ID.inst;
-	int EXTop=0;
-	unsigned int EXTsrc=0;
-
-	char RegDst,ALUop,ALUSrc;
-	char Branch,MemRead,MemWrite;
-	char RegWrite,MemtoReg;
-
-	rd=getbit(inst,7,11);
-	fuc3=getbit(inst,0,0);
-	//....
-
-
-	if(OP==OP_R)
-	{
-		if(fuc3==F3_ADD&&fuc7==F7_ADD)
-		{
-            EXTop=0;
-			RegDst=0;
-			ALUop=0;
-			ALUSrc=0;
-			Branch=0;
-			MemRead=0;
-			MemWrite=0;
-			RegWrite=0;
-			MemtoReg=0;
-		}
-		else
-		{
-		   
-		}
-	}
-	else if(OP==OP_I)
-    {
-        if(fuc3==F3_ADDI)
-        {
-            
-        }
-        else
-        {
-           
-        }
+    #ifdef DEBUG
+    printf("\nPC:%lx,  Instr:%x\n",this->pc,_f_instr);
+    #endif
+  }
+  if(_f_st == STALL){
+    if(!_f_s1_ok) _f_s1_ok = hzdDetect(_f_rs1,_f_s1); 
+    if(_f_s1_ok){
+      pc = _f_s1 + _f_offset;
+      
+    }else{
+      _f_st = STALL;
+      return 0;
     }
-    else if(OP==OP_SW)
-    {
-        if(fuc3==F3_SB)
-        {
-           
-        }
-        else
-        {
-           
-        }
-    }
-    else if(OP==OP_LW)
-    {
-        if(fuc3==F3_LB)
-        {
-			
-        }
-        else
-        {
+  }
+  if(_f_st == DONE){
+    if(_d_flush || (!_d_flush && (_d_st == DONE || _d_st == READY)) ){
+      _fd_instr = _f_instr;
+      _fd_pc = _f_pc;
 
-        }
+      _d_flush = false;
+      _fd_valid = true;
+      _f_st = READY;
     }
-    else if(OP==OP_BEQ)
-    {
-        if(fuc3==F3_BEQ)
-        {
-			
-        }
-        else
-        {
-           
-        }
+  }
+  if(_f_st == READY){
+    memcpy((void *)&_f_instr, (memory->mem + pc) , INSTR_SIZE);
+    _f_pc = this->pc;
+
+    _f_st = TICKING;
+    simClocksToFinish(_f_clk,CLK_IF);
+    
+    #ifdef DEBUG
+    sprintf(instr[IF_D],"PC:%lx,  Instr:0x%x\n",this->pc,_f_instr);
+    printf("\n - IF: %s",instr[IF_D]);
+    #endif
+    if(_f_instr==0) {
+      printf(" - IF: failure when reading from 0x%lx\n",pc);
+      return ERROR;
     }
-    else if(OP==OP_JAL)
-    {
+    
+    int64_t _pc_next,_pc_branch;
+    uint_t opcode = getBits(_f_instr,0,6);
+    _pc_next = pc + 4;
+    _f_offset = (getBits(_f_instr,8,11) << 1) + 
+                (getBits(_f_instr,25,30) << 5) + 
+                (getBits(_f_instr,7,7) << 11) + 
+                (getBits(_f_instr,31,31) << 12);
+    _f_offset = signExtend(_f_offset,13);
+
+
+    switch(opcode){
+      case OP_SB:{ 
+        _pc_branch = (uint64_t)pc + _f_offset; 
+        //branch prediction
+        pc = branchPred(_pc_next,_pc_branch); 
+        b_total ++; // stats
+        break;
+      }
+      case OP_UJ:{ 
+        _pc_branch = (uint64_t)pc + _f_offset; 
+        pc = _pc_branch;
+        break;
+      }
+      case OP_JALR:{
+        pc = _pc_next;
+        // hzd detect here.
+        _f_offset =  signExtend(getBits(_f_instr,20,31),12);
+        _f_rs1 = getBits(_f_instr,15,19);
+        if(!_f_s1_ok) _f_s1_ok = hzdDetect(_f_rs1,_f_s1); 
+        if(_f_s1_ok){
+          pc = _f_s1 + _f_offset;
+        }else{
+          _f_st = STALL;
+          return 0;
+        }
+        break;
+      } 
+      case OP_AUIPC:{
+        pc = _pc_next;
+        break;
+      }
+      default: {
+        pc = _pc_next;
+        break;
+      }
+    }
+  }
+  if(_f_st == TICKING){
+    simTick(_f_clk);
+    if(simTickDone(_f_clk)) _f_st = DONE;
+  }
+  return 0;
+}
+
+int CPU::ID(){
+  if(!_d_flush){
+    if( _d_st == STALL){
+      if(!_d_s1_ok) _d_s1_ok = hzdDetect(_d_rs1,_d_s1);
+      if(!_d_s2_ok) _d_s2_ok = hzdDetect(_d_rs2,_d_s2);
+      if( !(_d_s1_ok && _d_s2_ok) ) {
+        _d_st = STALL;
+        return 0;
+      }else{
+        _d_st = TICKING;
+      }
+    }
+    if( _d_st == DONE){
+      if(_e_flush || (!_e_flush && (_e_st == DONE || _e_st == READY)) ){
+        _de_s1 = _d_s1;
+        _de_s2 = _d_s2;
+        _de_rd = _d_rd;
+        _de_alu_op = _d_alu_op;
+        _de_b_op = _d_b_op;
+        _de_mem_op = _d_mem_op;
+        _de_data = _d_data;
+        _de_operand_type = _d_operand_type;
         
+        _e_flush = false;
+        _de_valid = true;
+        _d_st = READY;
+        #ifdef DEBUG
+        strcpy(instr[DE_D],instr[ID_D]);
+        #endif
+
+      }
     }
-    else
-    {
-		
+    if( _d_st == READY){
+      _d_instr = _fd_instr;
+      _d_pc = _fd_pc;
+      _fd_valid = false;
+      simClocksToFinish(_d_clk,CLK_ID);
+      uint_t opcode = getBits(_d_instr,0,6);
+      uint_t funct3=0,funct7=0;
+      switch(opcode){
+        case OP_R:{
+          funct3 = getBits(_d_instr,12,14);
+          funct7 = getBits(_d_instr,25,31);
+          _d_rs1 = getBits(_d_instr,15,19);
+          _d_rs2 = getBits(_d_instr,20,24);
+          _d_rd = getBits(_d_instr,7,11);
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+          _d_operand_type = DOUBLE;
+          switch(funct3){
+            case 0x0:{
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_ADD;
+                _d_s1_ok = hzdDetect(_d_rs1,_d_s1);
+                _d_s2_ok = hzdDetect(_d_rs2,_d_s2);
+                if( !(_d_s1_ok && _d_s2_ok) ) {
+                  _d_st = STALL;
+                  return 0;
+                }else{
+                  _d_st = TICKING;
+                }
+                #ifdef DEBUG
+                sprintf(instr[ID_D],"add %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                printf(" - ID:%s",instr[ID_D]);
+                #endif
+                break;
+              }
+            }
+          }
+          break;
+        }
+        case OP_IMM:{
+          funct3 = getBits(_f_instr,12,14);
+          _d_rs1 = getBits(_f_instr,15,19);
+          _d_rd = getBits(_f_instr,7,11);
+          _d_s2 = signExtend(getBits(_f_instr,20,31),12);
+          _d_s2_ok = true;
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+          switch(funct3){
+            case 0x0:{
+              _d_s1_ok = hzdDetect(_d_rs1,_d_s1);
+              if( !(_d_s1_ok && _d_s2_ok) ) {
+                _d_st = STALL;
+                return 0;
+              }else{
+                _d_st = TICKING;
+              }
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"addi %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+              printf(" - ID:%s",instr[ID_D]);
+              #endif
+              break;
+            }
+          }
+          break;
+        }
+        case OP_AUIPC:{// auipc
+          _d_rd = getBits(_f_instr,7,11);
+          _d_s1 = _d_pc;
+          _d_s2 = signExtend((getBits(_f_instr,12,31) << 12),32);
+          _d_alu_op = ALU_ADD;
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+          _d_operand_type = DOUBLE;
+
+          _d_st = TICKING;
+          #ifdef DEBUG
+          sprintf(instr[ID_D],"auipc %u, $0x%x\n",_d_rd, (long)getBits(_d_instr,12,31));
+          printf(" - ID: %s",instr[ID_D]);
+          #endif
+          break;
+        } 
+        default:{
+          printf("Instruction not supported!\n");
+          return ERROR;
+        }
+      }
     }
-
-	//write ID_EX_old
-	ID_EX_old.Rd=rd;
-	ID_EX_old.Rt=rt;
-	ID_EX_old.Imm=ext_signed(EXTsrc,EXTop);
-	//...
-
-	ID_EX_old.Ctrl_EX_ALUOp=ALUop;
-	//....
-
+    if( _d_st == TICKING){
+      simTick(_d_clk);
+      if(simTickDone(_d_clk)) _d_st = DONE;
+    }
+  }
+  return 0;
 }
 
-//执行
-void CPU::EX()
-{
-	//read ID_EX
-	int temp_PC=ID_EX.PC;
-	char RegDst=ID_EX.Ctrl_EX_RegDst;
-	char ALUOp=ID_EX.Ctrl_EX_ALUOp;
+int CPU::EX(){
+  if(!_e_flush){
+    if(_e_st == DONE){
+      
+      if(_e_b_op != NOP && hasPredicted(_e_b_op) ){// deal with branch prediction
+        bool _e_toBranch = toBranch(_e_b_op,_e_odata);
+        if(_e_toBranch != is_b_taken_pred.front()){ // wrong prediction
+          #ifdef DEBUG
+          printf(" - EX: branch prediction wrong. recovering to PC=0x%lu\n",pc_recover.front());
+          #endif
+          wrongPred();
+        }else{
+          #ifdef DEBUG
+          printf(" - EX: branch prediction correct.\n");
+          #endif
+          correctPred();
+        }
+      }
+      if(_m_st == READY || _m_st == DONE){
+        _em_data = _e_odata;
+        _em_data2 = _e_odata2;
+        _em_rd = _e_rd;
+        _em_mem_op = _e_mem_op;
+        _em_operand_type = _e_operand_type;
+        _em_valid = TRUE;
+        _e_st = READY;
+        _m_flush = false;
 
-	//Branch PC calulate
-	//...
+        #ifdef DEBUG
+        strcpy(instr[EM_D],instr[EX_D]);
+        #endif
+      }
+    }
+    if(_e_st == READY){
+      if(_de_valid){
+        _e_s1 = _de_s1;
+        _e_s2 = _de_s2;
+        _e_b_op = _de_b_op;
+        _e_alu_op = _de_alu_op;
+        _e_idata = _de_data;
+        _e_mem_op = _de_mem_op;
+        _e_rd = _de_rd;
+        _e_operand_type = _de_operand_type;
+        _de_valid = FALSE;
 
-	//choose ALU input number
-	//...
+        #ifdef DEBUG
+        strcpy(instr[EX_D],instr[DE_D]);
+        #endif
 
-	//alu calculate
-	int Zero;
-	REG ALUout;
-	switch(ALUOp){
-	default:;
-	}
-
-	//choose reg dst address
-	int Reg_Dst;
-	if(RegDst)
-	{
-
-	}
-	else
-	{
-
-	}
-
-	//write EX_MEM_old
-	EX_MEM_old.ALU_out=ALUout;
-	EX_MEM_old.PC=temp_PC;
-    //.....
+        switch(_e_alu_op){
+          case ALU_ADD: _e_odata = (int64_t)_e_s1 + (int64_t)_e_s2;simClocksToFinish(_e_clk,CLK_S_OP); break;
+          case ALU_SUB: _e_odata = (int64_t)_e_s1 - (int64_t)_e_s2;simClocksToFinish(_e_clk,CLK_S_OP); break;
+          case ALU_SUB_U: _e_odata = (uint64_t)_e_s1 - (uint64_t)_e_s2;simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_MUL: {
+            __int128_t tmp = _e_s1* _e_s2;
+            _e_odata = tmp & 0xffffffffffffffff; 
+            simClocksToFinish(_e_clk,CLK_M_OP);
+            break;}
+          case ALU_SLL: _e_odata = _e_s1 << _e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_MULH: {
+            __int128_t tmp = _e_s1* _e_s2;
+            _e_odata = tmp >> 64; 
+            simClocksToFinish(_e_clk,CLK_M_OP);
+            break;}
+          case ALU_SLT: _e_odata = ((int64_t)_e_s1 < (int64_t)_e_s2)? 1: 0; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_XOR: _e_odata = _e_s1 ^ _e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_DIV: _e_odata = _e_s1 / _e_s2; simClocksToFinish(_e_clk,CLK_L_OP);break;
+          case ALU_SRL: _e_odata = (uint64_t)_e_s1 >> (int64_t)_e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_SRA: _e_odata = (int64_t) _e_s1 >> (int64_t)_e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_OR: _e_odata = _e_s1 | _e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_REM: _e_odata = _e_s1 % _e_s2; simClocksToFinish(_e_clk,CLK_L_OP);break;
+          case ALU_AND: _e_odata = _e_s1 & _e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case NOP: _e_odata = _e_idata; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          default: 
+            printf("ALU op error!"); return ERROR;
+          }
+        _e_odata2 = _e_idata;
+        #ifdef DEBUG
+        if(_e_alu_op != NOP) printf(" - EX: s1: 0x%lx, s2: 0x%lx, _e_odata: 0x%lx\n",_e_s1,_e_s2,_e_odata);
+        #endif
+        _e_st = TICKING;
+      }
+    }
+    if(_e_st == TICKING){
+      simTick(_e_clk);
+      if(simTickDone(_e_clk)) {_e_st = DONE;}
+    }
+  }
+  return 0;
 }
 
-//访问存储器
-void CPU::MEM()
-{
-	//read EX_MEM
+int CPU::MEM(){
+  if(!_m_flush){
+    if(_m_st == DONE){
+      if(_w_st == READY || _w_st == DONE){
+        _mw_data = _m_odata;
+        _mw_rd = _m_rd;
+        _mw_valid = TRUE;
+        _m_st = READY;
+        _w_flush = false;
+        #ifdef DEBUG
+        strcpy(instr[MW_D],instr[MEM_D]);
+        #endif
+      }
+    }
+    if(_m_st == READY){
+      if(_em_valid){
+        _m_idata = _em_data;
+        _m_addr = _em_data2;
+        _m_rd = _em_rd;
+        _m_mem_op = _em_mem_op;
+        _m_operand_type = _em_operand_type;
+        _em_valid = FALSE; // invalidate the former data
 
-	//complete Branch instruction PC change
+        #ifdef DEBUG
+        strcpy(instr[MEM_D],instr[EM_D]);
+        #endif
+        
+        #ifdef DEBUG
+        if(_m_mem_op != NOP){
+          printf("    - Mem content check(before): \n      ");
+          for(int i = 0 ;i < 8 ;++i){
+            printf("%02x ", memory->mem[(uint64_t)_m_addr+i]);
+          }
+          printf("\n");
+        }
+        #endif
+        switch(_m_mem_op){
+          case MREAD:{
+            memcpy(&_m_odata, &memory->mem[(uint64_t)_m_addr], sizeof(uint64_t));
+            switch(_m_operand_type){
+              case BYTE: _m_odata = signExtend(_m_odata, 8); break;
+              case HALF: _m_odata = signExtend(_m_odata, 16);break;
+              case WORD: _m_odata = signExtend(_m_odata, 32);break;
+              case BYTEU: _m_odata = zeroExtend(_m_odata & 0xff); break;
+              case HALFU: _m_odata = zeroExtend(_m_odata & 0xffff);break;
+              case WORDU: _m_odata = zeroExtend(_m_odata & 0xffffffff); break;
+              case DOUBLE:break;
+              default: printf(" load type error!\n"); return ERROR;
+            }
+            
+            #ifdef DEBUG
+            printf(" - MEM: read data: 0x%lx at addr: 0x%lx\n",(uint64_t)_m_odata,(uint64_t)_m_addr);
+            #endif
+            
+            break;
+          }
+          case MWRITE:{
+            int store_size = 0;
+            switch(_m_operand_type){
+              case BYTE: store_size = 1; break;
+              case HALF: store_size = 2; break;
+              case WORD: store_size = 4; break;
+              case DOUBLE: store_size = 8;break;
+              default: printf(" store type error!\n"); return ERROR;
+            }
+            memcpy( &memory->mem[(uint64_t)_m_addr],&_m_idata, store_size);
 
-	//read / write memory
+            #ifdef DEBUG
+            printf(" - MEM: store data: 0x%lx at addr: 0x%lx\n",(uint64_t)_m_idata,(uint64_t)_m_addr);
+            #endif
 
-	//write MEM_WB_old
+            break;
+          }
+          case NOP:{
+            // if not load or store , "_m_addr" is the outcome of ALU
+            switch(_m_operand_type){
+              case WORD: _m_addr =signExtend(_m_addr & 0xffffffff, 32); break;
+              case DOUBLE: break;
+              default: printf(" mem_nop type error!\n"); return ERROR;
+            }
+            _m_odata = _m_addr;
+            break;
+          }
+        }
+        #ifdef DEBUG
+        if(_m_mem_op != NOP){
+          printf("    - Mem content check(after): \n      ");
+          for(int i = 0 ;i < 8 ;++i){
+            printf("%02x ", memory->mem[(uint64_t)_m_addr+i]);
+          }
+          printf("\n");
+        }
+        #endif
+        simClocksToFinish(_m_clk,CLK_MEM);
+        _m_st = TICKING;
+      }//else if _mw_valid == false, do nothing.
+    }
+    if(_m_st == TICKING){
+      simTick(_m_clk);
+      if(simTickDone(_m_clk)) {_m_st = DONE;}
+    }
+  }
+  return 0;
 }
 
+int CPU::WB(){
+  if(!_w_flush){
+    if(_w_st == DONE){
+      if(_w_rd != 0){
+        regfile->greg[_w_rd] = _w_data;
+        #ifdef DEBUG
+        printf(" - WB: write data 0x%lu back to reg:%d\n",_w_data,_w_rd);
+        #endif
+      }else{
+        #ifdef DEBUG
+        printf(" - WB: write nothing\n");
+        #endif
+      }
+      //else do nothing.
+      
+      _w_st = READY;
+    }
+    if(_w_st == READY){
+      if(_mw_valid){
 
-//写回
-void CPU::WB()
-{
-	//read MEM_WB
-
-	//write reg
-}*/
+        #ifdef DEBUG
+        strcpy(instr[WB_D],instr[MW_D]);
+        #endif
+        _w_rd = _mw_rd;
+        _w_data = _mw_data;
+        simClocksToFinish(_w_clk,CLK_WB);
+        _mw_valid = FALSE; // Next round data is not ready.
+        _w_st = TICKING;
+      }//else if _mw_valid == false, do nothing.
+    }
+    if(_w_st == TICKING){
+      simTick(_w_clk);
+      if(simTickDone(_w_clk)) {_w_st = DONE;}
+    }
+  }
+  return 0;
+}

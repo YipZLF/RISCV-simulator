@@ -3,8 +3,6 @@
  */
 
 #include "macro.h"
-
-
 #include"cpu.h"
 #include"loader.h"
 
@@ -31,10 +29,12 @@ int main(int argc, char ** argv){
     printf("Load ELF file error!\n");
     return 0;
   };
-  int cnt = 0;
+  int cnt = 1;
+  sscanf(argv[2],"%d",&cnt);
   for(;;){// into loop, each loop means one tick of the clock
-    unsigned int status = cpu->step();
+    int status = cpu->pl_step();
     
+    cpu->printPL();
     cpu->printReg();
     if(status==ERROR){
       printf("CPU error!\n");
@@ -48,8 +48,7 @@ int main(int argc, char ** argv){
     if(verbose){
       //cpu->print_status();
     }
-    if(cnt>1){
-      cnt --;
+    if(cnt>0){
       if(single_step){
         char op;
         if(scanf("%c",&op)==1){

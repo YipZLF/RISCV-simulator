@@ -9,6 +9,7 @@
 #include<cstdio>
 #include<cstring>
 #include<string>
+#include<queue>
 
 typedef unsigned int uint_t;
 typedef unsigned long int uint64_t;
@@ -93,16 +94,17 @@ typedef long int int64_t;
 #define ALU_AND 0xd
 #define ALU_SUB_U 0xe
 
-// - b_op: branch control
+// - b_op: branch control.
+// branch op that needed prediction is encoded with odd numbers
 #define TAKE_BRANCH 0x1
 #define BNE 0x1
-#define JAL 0x2
 #define BEQ 0x3
-#define BLT 0x4
-#define BGE 0x5
-#define BLTU 0x6
-#define BGEU 0x7
-#define JALR 0x8
+#define BLT 0x5
+#define BGE 0x7
+#define BLTU 0x9
+#define BGEU 0xb
+#define JAL 0x2
+#define JALR 0x4
 
 // - pc_source
 #define PC_NEXT 0x1
@@ -141,6 +143,10 @@ typedef long int int64_t;
 #define WORD 0x2
 #define HALF 0x3
 #define BYTE 0x4
+#define DOUBLEU 0x5
+#define WORDU 0x6
+#define HALFU 0x7
+#define BYTEU 0x8
 
 #define FALSE 0
 #define TRUE 1
@@ -151,11 +157,43 @@ typedef long int int64_t;
 // regfile configuration
 #define REG_CNT 32
 
+// pipeline state codes.
+#define READY 1 // ready
+#define TICKING 3 // simulation of the real executing process.
+#define DONE 2
+#define STALL 4
 
 #define INSTR_SIZE 4
 
 
-#define DONE 1
-#define EXECUTE 2
+
+
+// cycles needed for each states
+#define simClocksToFinish(stage,simcycles) (stage = simcycles)
+#define simTick(simcycles) (simcycles-=1)
+#define simTickDone(simcycles) (simcycles==0)
+#define simTickNotDone(simcycles) (simcycles>0)
+#define CLK_IF 1
+#define CLK_ID 1
+#define CLK_S_OP 1
+#define CLK_M_OP 2
+#define CLK_L_OP 3
+#define CLK_WB 1
+#define CLK_MEM 2
+
+
+#ifdef DEBUG
+
+#define IF_D 0
+#define ID_D 1
+#define EX_D 2
+#define MEM_D 3
+#define WB_D 4
+#define DE_D 5
+#define EM_D 6
+#define MW_D 7
+
+#endif
+
 
 #endif
