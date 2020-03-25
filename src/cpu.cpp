@@ -40,6 +40,7 @@ bool toBranch(uint_t b_op, uint64_t alu_d){
 
 
 int CPU::step(){
+  
   /*
   // if instruction is not done; tick once;
   if(cpu_status!=DONE){
@@ -47,7 +48,7 @@ int CPU::step(){
       cpu_status==DONE;
     return NULL;
   }
-*/
+  */
   // if done:
   // IF: fetch the instruction;
   uint_t cur_instr;
@@ -407,7 +408,7 @@ int CPU::step(){
               s2 = imm & 0x3f; // only imm[5:0]
               imm_size = 6;
               #ifdef DEBUG
-              printf(" - ID: slli %u, %u,$%ld\n",rd,rs1,signExtend(imm,imm_size));
+              printf(" - ID: slliw %u, %u,$%ld\n",rd,rs1,signExtend(imm,imm_size));
               #endif
               break;
             default:
@@ -863,20 +864,19 @@ int CPU::pl_step(){
 }
 
 int CPU::IF(){
-  if(_f_b_pred_error){
+  /*if(_f_b_pred_error){
     memcpy((void *)&_f_instr, (memory->mem + pc) , INSTR_SIZE);
     _f_pc = this->pc;
 
     _f_b_pred_error = false;
-    _f_st = TICKING;
-    simClocksToFinish(_f_clk,CLK_IF);
+    _f_st = READY;
 
     #ifdef DEBUG
-    printf("\nPC:%lx,  Instr:%x\n",this->pc,_f_instr);
+    printf(" - IF: recover: PC:%lx,  Instr:%x\n",this->pc,_f_instr);
     #endif
-  }
+  }*/
   if(_f_st == STALL){
-    if(!_f_s1_ok) _f_s1_ok = hzdDetect(_f_rs1,_f_s1); 
+    _f_s1_ok = hzdDetect(_f_rs1,_f_s1,true); 
     if(_f_s1_ok){
       pc = _f_s1 + _f_offset;
       
@@ -886,11 +886,11 @@ int CPU::IF(){
     }
   }
   if(_f_st == DONE){
-    if(_d_flush || (!_d_flush && (_d_st == DONE || _d_st == READY)) ){
+    if(_d_flush || (!_d_flush && (_fd_valid == false )) ){
       _fd_instr = _f_instr;
       _fd_pc = _f_pc;
 
-      _d_flush = false;
+      if(_d_flush) {_d_flush = false; _d_st = READY;}
       _fd_valid = true;
       _f_st = READY;
     }
@@ -908,7 +908,6 @@ int CPU::IF(){
     #endif
     if(_f_instr==0) {
       printf(" - IF: failure when reading from 0x%lx\n",pc);
-      return ERROR;
     }
     
     int64_t _pc_next,_pc_branch;
@@ -926,12 +925,23 @@ int CPU::IF(){
         _pc_branch = (uint64_t)pc + _f_offset; 
         //branch prediction
         pc = branchPred(_pc_next,_pc_branch); 
+        #ifdef DEBUG
+        printf("   - IF: SB: pc = 0x%lx\n",pc);
+        #endif 
         b_total ++; // stats
         break;
       }
       case OP_UJ:{ 
+        _f_offset = (getBits(_f_instr,21,30) << 1) + 
+                    (getBits(_f_instr,20,20) << 11) + 
+                    (getBits(_f_instr,12,19) << 12) + 
+                    (getBits(_f_instr,31,31) << 20);
+        _f_offset = signExtend(_f_offset,21);
         _pc_branch = (uint64_t)pc + _f_offset; 
         pc = _pc_branch;
+        #ifdef DEBUG
+        printf("   - IF: UJ:pc = 0x%lx\n",pc);
+        #endif 
         break;
       }
       case OP_JALR:{
@@ -939,17 +949,27 @@ int CPU::IF(){
         // hzd detect here.
         _f_offset =  signExtend(getBits(_f_instr,20,31),12);
         _f_rs1 = getBits(_f_instr,15,19);
-        if(!_f_s1_ok) _f_s1_ok = hzdDetect(_f_rs1,_f_s1); 
+        _f_s1_ok = hzdDetect(_f_rs1,_f_s1,true); 
         if(_f_s1_ok){
           pc = _f_s1 + _f_offset;
+          #ifdef DEBUG
+          printf("   - IF: JALR:pc = 0x%lx\n",pc);
+          #endif 
         }else{
+          #ifdef DEBUG
+          printf("   - IF: JALR:stall \n",pc);
+          #endif 
           _f_st = STALL;
           return 0;
         }
+        
         break;
       } 
       case OP_AUIPC:{
         pc = _pc_next;
+        #ifdef DEBUG
+        printf("   - IF: AUIPC:pc = 0x%lx\n",pc);
+        #endif 
         break;
       }
       default: {
@@ -968,9 +988,9 @@ int CPU::IF(){
 int CPU::ID(){
   if(!_d_flush){
     if( _d_st == STALL){
-      if(!_d_s1_ok) _d_s1_ok = hzdDetect(_d_rs1,_d_s1);
-      if(!_d_s2_ok) _d_s2_ok = hzdDetect(_d_rs2,_d_s2);
-      if( !(_d_s1_ok && _d_s2_ok) ) {
+      if(!_d_rs1_ok) _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
+      if(!_d_rs2_ok) _d_rs2_ok = hzdDetect(_d_rs2,_d_s2);
+      if( !(_d_rs1_ok && _d_rs2_ok) ) {
         _d_st = STALL;
         return 0;
       }else{
@@ -978,7 +998,7 @@ int CPU::ID(){
       }
     }
     if( _d_st == DONE){
-      if(_e_flush || (!_e_flush && (_e_st == DONE || _e_st == READY)) ){
+      if(_e_flush || (!_e_flush && (_de_valid == false)) ){
         _de_s1 = _d_s1;
         _de_s2 = _d_s2;
         _de_rd = _d_rd;
@@ -988,7 +1008,7 @@ int CPU::ID(){
         _de_data = _d_data;
         _de_operand_type = _d_operand_type;
         
-        _e_flush = false;
+        if(_e_flush) {_e_flush = false; _e_st = READY;}
         _de_valid = true;
         _d_st = READY;
         #ifdef DEBUG
@@ -1001,7 +1021,11 @@ int CPU::ID(){
       _d_instr = _fd_instr;
       _d_pc = _fd_pc;
       _fd_valid = false;
+      #ifdef DEBUG
+      printf("    - ID: at 0x%lx fetched 0x%x \n",_d_pc,_d_instr);
+      #endif
       simClocksToFinish(_d_clk,CLK_ID);
+      if(_d_instr==0) printf(" - ID: failure when decoding 0x%lx\n",_d_instr);
       uint_t opcode = getBits(_d_instr,0,6);
       uint_t funct3=0,funct7=0;
       switch(opcode){
@@ -1017,69 +1041,675 @@ int CPU::ID(){
           switch(funct3){
             case 0x0:{
               switch(funct7){
-                case 0x00: _d_alu_op = ALU_ADD;
-                _d_s1_ok = hzdDetect(_d_rs1,_d_s1);
-                _d_s2_ok = hzdDetect(_d_rs2,_d_s2);
-                if( !(_d_s1_ok && _d_s2_ok) ) {
-                  _d_st = STALL;
-                  return 0;
-                }else{
-                  _d_st = TICKING;
-                }
-                #ifdef DEBUG
-                sprintf(instr[ID_D],"add %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                printf(" - ID:%s",instr[ID_D]);
-                #endif
-                break;
+                case 0x00: {_d_alu_op = ALU_ADD;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"add %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;}
+                case 0x01: {_d_alu_op = ALU_MUL;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"mul %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;}
+                case 0x20: {_d_alu_op = ALU_SUB;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"sub %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;}
+                default:
+                  printf("Instruction %x not supported!\n",_d_instr);
+                  return ERROR;
               }
+              break;
             }
+            case 0x1:{
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_SLL;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"sll %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                case 0x01: _d_alu_op = ALU_MULH;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"mulh %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return ERROR;
+                }
+              break;
+            }
+            case 0x2:{
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_SLT;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"slt %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return -1;
+                }
+              break;
+            }
+            case 0x4:{
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_XOR;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"xor %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                case 0x01: _d_alu_op = ALU_DIV;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"div %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return ERROR;
+                }
+              break;
+            }
+            case 0x5:{
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_SRL;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"srl %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                case 0x20: _d_alu_op = ALU_SRA;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"sra %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return -1;
+                }
+              break;
+            }
+            case 0x6:{
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_OR;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"or %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                case 0x01: _d_alu_op = ALU_REM;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"rem %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return -1;
+                }
+              break;
+            }
+            case 0x7:{
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_AND;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"and %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return -1;
+                }
+              break;
+            }
+            default: 
+              printf("Instruction not supported!\n");
+              return ERROR;
+            }
+          _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
+          _d_rs2_ok = hzdDetect(_d_rs2,_d_s2);
+          if( !(_d_rs1_ok && _d_rs2_ok) ) {
+            _d_st = STALL;
+            return 0;
+          }else{
+            _d_st = TICKING;
           }
+          #ifdef DEBUG
+          printf(" - ID:%s",instr[ID_D]);
+          #endif
+          break;
+        }
+        case OP_R_W:{
+          funct3 = getBits(_d_instr,12,14);
+          funct7 = getBits(_d_instr,25,31);
+          _d_rs1 = getBits(_d_instr,15,19);
+          _d_rs2 = getBits(_d_instr,20,24);
+          _d_rd = getBits(_d_instr,7,11);
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+          _d_operand_type = WORD;
+          switch(funct3){
+            case 0x0:{
+              switch(funct7){
+                case 0x00: {_d_alu_op = ALU_ADD;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"addw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;}
+                case 0x20: {_d_alu_op = ALU_SUB;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"subw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;}
+                default:
+                  printf("Instruction %x not supported!\n",_d_instr);
+                  return ERROR;
+              }
+              break;
+            }
+            case 0x1:{
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_SLL;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"sllw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return ERROR;
+                }
+              break;
+            }
+            case 0x5:{
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_SRL;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"srlw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                case 0x20: _d_alu_op = ALU_SRA;
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"sraw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return -1;
+                }
+              break;
+            }
+            default: 
+              printf("Instruction not supported!\n");
+              return ERROR;
+            }
+          _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
+          _d_rs2_ok = hzdDetect(_d_rs2,_d_s2);
+          if( !(_d_rs1_ok && _d_rs2_ok) ) {
+            _d_st = STALL;
+            return 0;
+          }else{
+            _d_st = TICKING;
+          }
+          #ifdef DEBUG
+          printf(" - ID:%s",instr[ID_D]);
+          #endif
           break;
         }
         case OP_IMM:{
-          funct3 = getBits(_f_instr,12,14);
-          _d_rs1 = getBits(_f_instr,15,19);
-          _d_rd = getBits(_f_instr,7,11);
-          _d_s2 = signExtend(getBits(_f_instr,20,31),12);
-          _d_s2_ok = true;
-          _d_mem_op = NOP;
-          _d_b_op = NOP;
-          switch(funct3){
-            case 0x0:{
-              _d_s1_ok = hzdDetect(_d_rs1,_d_s1);
-              if( !(_d_s1_ok && _d_s2_ok) ) {
-                _d_st = STALL;
-                return 0;
-              }else{
-                _d_st = TICKING;
-              }
-              #ifdef DEBUG
-              sprintf(instr[ID_D],"addi %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-              printf(" - ID:%s",instr[ID_D]);
-              #endif
-              break;
-            }
-          }
-          break;
-        }
-        case OP_AUIPC:{// auipc
-          _d_rd = getBits(_f_instr,7,11);
-          _d_s1 = _d_pc;
-          _d_s2 = signExtend((getBits(_f_instr,12,31) << 12),32);
-          _d_alu_op = ALU_ADD;
+          funct3 = getBits(_d_instr,12,14);
+          _d_rs1 = getBits(_d_instr,15,19);
+          _d_rd = getBits(_d_instr,7,11);
+          _d_s2 = signExtend(getBits(_d_instr,20,31),12);
+          _d_rs2_ok = true;
           _d_mem_op = NOP;
           _d_b_op = NOP;
           _d_operand_type = DOUBLE;
-
+          switch(funct3){
+            case 0x0:{ _d_alu_op = ALU_ADD;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"addi %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
+              #endif
+              break;
+            } 
+            case 0x1:{
+              funct7 = getBits(_d_instr,26,31);
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_SLL;
+                  _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"slli %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return -1;
+              }
+              break;
+            }
+            case 0x2:{ _d_alu_op = ALU_SLT;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"slti %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
+              #endif
+              break;
+            } 
+            case 0x4:{ _d_alu_op = ALU_XOR;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"xori %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
+              #endif
+              break;
+            } 
+            case 0x5:{
+              funct7 = getBits(_d_instr,26,31);
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_SRL;
+                  _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"srli %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
+                  #endif
+                  break;
+                case 0x10: _d_alu_op = ALU_SRA;
+                  _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"srai %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return -1;
+              }
+              break;
+            }
+            case 0x6:{ _d_alu_op = ALU_OR;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"ori %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
+              #endif
+              break;
+            }
+            case 0x7:{ _d_alu_op = ALU_AND;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"andi %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
+              #endif
+              break;
+            }  
+            default:{
+              printf("Instruction %x not supported!\n",_d_instr);
+              return ERROR;
+            }
+          }
+          _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
+          
+          if( !(_d_rs1_ok && _d_rs2_ok) ) {
+            _d_st = STALL;
+            return 0;
+          }else{
+            _d_st = TICKING;
+          }
+          #ifdef DEBUG
+          printf(" - ID:%s",instr[ID_D]);
+          #endif
+          
+          break;
+        }
+        case OP_IMM_W:{
+          funct3 = getBits(_d_instr,12,14);
+          _d_rs1 = getBits(_d_instr,15,19);
+          _d_rd = getBits(_d_instr,7,11);
+          _d_s2 = signExtend(getBits(_d_instr,20,31),12);
+          _d_rs2_ok = true;
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+          _d_operand_type = WORD;
+          switch(funct3){
+            case 0x0:{ _d_alu_op = ALU_ADD;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"addiw %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
+              #endif
+              break;
+            } 
+            case 0x1:{
+              funct7 = getBits(_d_instr,26,31);
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_SLL;
+                  _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"slliw %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return -1;
+              }
+              break;
+            }
+            case 0x5:{
+              funct7 = getBits(_d_instr,26,31);
+              switch(funct7){
+                case 0x00: _d_alu_op = ALU_SRL;
+                  _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"srliw %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
+                  #endif
+                  break;
+                case 0x10: _d_alu_op = ALU_SRA;
+                  _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
+                  #ifdef DEBUG
+                  sprintf(instr[ID_D],"sraiw %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
+                  #endif
+                  break;
+                default:
+                  printf("Instruction not supported!\n");
+                  return -1;
+              }
+              break;
+            }
+            default:{
+              printf("Instruction %x not supported!\n",_d_instr);
+              return ERROR;
+            }
+          }
+          _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
+          
+          if( !(_d_rs1_ok && _d_rs2_ok) ) {
+            _d_st = STALL;
+            return 0;
+          }else{
+            _d_st = TICKING;
+          }
+          #ifdef DEBUG
+          printf(" - ID:%s",instr[ID_D]);
+          #endif
+          
+          break;
+        }
+        case OP_LOAD:{
+          funct3 = getBits(_d_instr,12,14);
+          _d_rs1 = getBits(_d_instr,15,19);
+          _d_s2 = signExtend(getBits(_d_instr,20,31),12);
+          _d_rs2_ok = true;
+          _d_rd = getBits(_d_instr,7,11);
+          _d_alu_op = ALU_ADD;
+          _d_mem_op = MREAD;
+          _d_b_op = NOP;
+          switch(funct3){
+            case 0x6:{_d_operand_type = WORDU;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"lwu %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            case 0x5:{_d_operand_type = HALFU;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"lhu %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            case 0x4:{_d_operand_type = BYTEU;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"lbu %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            case 0x3:{_d_operand_type = DOUBLE;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"ld %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            case 0x2:{_d_operand_type = WORD;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"lw %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            case 0x1:{_d_operand_type = HALF;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"lh %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            case 0x0:{_d_operand_type = LBYTE;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"lb %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            default: printf("Not implemented instruction\n");return ERROR;
+          }
+          _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
+          
+          if( !(_d_rs1_ok && _d_rs2_ok) ) {
+            _d_st = STALL;
+            return 0;
+          }else{
+            _d_st = TICKING;
+          }
+          #ifdef DEBUG
+          printf(" - ID:%s",instr[ID_D]);
+          #endif
+          
+          break;
+        }
+        case OP_STORE:{
+          funct3 = getBits(_d_instr,12,14);
+          _d_rs1 = getBits(_d_instr,15,19);
+          _d_rs2 = getBits(_d_instr,20,24);
+          _d_s2 = signExtend((getBits(_d_instr,7,11)) + (getBits(_d_instr,25,31) <<5)
+                              , 12);
+          _d_alu_op = ALU_ADD;
+          _d_mem_op = MWRITE;
+          _d_b_op = NOP;
+          _d_rd = 0;// 0 for NONE
+          switch(funct3){
+            case 0x3:{_d_operand_type = DOUBLE;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"sd %u, $0x%lx(%u)\n",_d_rs2,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            case 0x2:{_d_operand_type = WORD;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"sw %u, $0x%lx(%u)\n",_d_rs2,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            case 0x1:{_d_operand_type = HALF;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"sh %u, $0x%lx(%u)\n",_d_rs2,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            case 0x0:{_d_operand_type = BYTE;
+              #ifdef DEBUG
+              sprintf(instr[ID_D],"sb %u, $0x%lx(%u)\n",_d_rs2,_d_s2,_d_rs1);
+              #endif
+              break;
+            }
+            default: printf("Instruction not implemented.\n"); return ERROR;
+          }
+          _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
+          _d_rs2_ok = hzdDetect(_d_rs2,_d_data); // served as data to store
+          if( !(_d_rs1_ok && _d_rs2_ok) ) {
+            _d_st = STALL;
+            return 0;
+          }else{
+            _d_st = TICKING;
+          }
+          #ifdef DEBUG
+          printf(" - ID:%s",instr[ID_D]);
+          #endif
+          
+          break;
+        }
+        case OP_SB:{
+          funct3 = getBits(_d_instr,12,14);
+          _d_rs1 = getBits(_d_instr,15,19);
+          _d_rs2 = getBits(_d_instr,20,24);
+          _d_rd = 0;
+          _d_mem_op = NOP;
+          switch(funct3){
+            case 0x0:{_d_b_op = BEQ;
+              _d_alu_op = ALU_SUB;
+              #ifdef DEBUG
+              int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
+                                        (getBits(_d_instr,25,30) << 5) + 
+                                        (getBits(_d_instr,7,7) << 11) + 
+                                        (getBits(_d_instr,31,31) << 12),13);
+              sprintf(instr[ID_D],"beq %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
+              #endif
+              break;
+            }
+            case 0x1:{_d_b_op = BNE;
+              _d_alu_op = ALU_SUB;
+              #ifdef DEBUG
+              int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
+                                        (getBits(_d_instr,25,30) << 5) + 
+                                        (getBits(_d_instr,7,7) << 11) + 
+                                        (getBits(_d_instr,31,31) << 12),13);
+              sprintf(instr[ID_D],"bne %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
+              #endif
+              break;
+            }
+            case 0x4:{_d_b_op = BLT;
+              _d_alu_op = ALU_SUB;
+              #ifdef DEBUG
+              int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
+                                        (getBits(_d_instr,25,30) << 5) + 
+                                        (getBits(_d_instr,7,7) << 11) + 
+                                        (getBits(_d_instr,31,31) << 12),13);
+              sprintf(instr[ID_D],"blt %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
+              #endif
+              break;
+            }
+            case 0x5:{_d_b_op = BGE;
+              _d_alu_op = ALU_SUB;
+              #ifdef DEBUG
+              int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
+                                        (getBits(_d_instr,25,30) << 5) + 
+                                        (getBits(_d_instr,7,7) << 11) + 
+                                        (getBits(_d_instr,31,31) << 12),13);
+              sprintf(instr[ID_D],"bge %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
+              #endif
+              break;
+            }
+            case 0x6:{_d_b_op = BLTU;
+              _d_alu_op = ALU_SUB_U;
+              #ifdef DEBUG
+              int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
+                                        (getBits(_d_instr,25,30) << 5) + 
+                                        (getBits(_d_instr,7,7) << 11) + 
+                                        (getBits(_d_instr,31,31) << 12),13);
+              sprintf(instr[ID_D],"bltu %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
+              #endif
+              break;
+            }
+            case 0x7:{_d_b_op = BGEU;
+              _d_alu_op = ALU_SUB_U;
+              #ifdef DEBUG
+              int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
+                                        (getBits(_d_instr,25,30) << 5) + 
+                                        (getBits(_d_instr,7,7) << 11) + 
+                                        (getBits(_d_instr,31,31) << 12),13);
+              sprintf(instr[ID_D],"bgeu %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
+              #endif
+              break;
+            }
+            default: 
+              printf("Instruction not supported!\n");
+              return -1;
+              break;
+          }
+          _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
+          _d_rs2_ok = hzdDetect(_d_rs2,_d_s2);
+          if( !(_d_rs1_ok && _d_rs2_ok) ) {
+            _d_st = STALL;
+            return 0;
+          }else{
+            _d_st = TICKING;
+          }
+          #ifdef DEBUG
+          printf(" - ID:%s",instr[ID_D]);
+          #endif
+          break;
+        }
+        case OP_AUIPC:{// auipc
+          _d_rd = getBits(_d_instr,7,11);
+          _d_s1 = 0;
+          _d_s2 = 0;
+          _d_rs1_ok = _d_rs2_ok = true;
+          _d_data = signExtend((getBits(_d_instr,12,31) << 12),32) + _d_pc;
+          _d_operand_type = DOUBLE;
+          _d_alu_op = NOP;
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+          
           _d_st = TICKING;
           #ifdef DEBUG
-          sprintf(instr[ID_D],"auipc %u, $0x%x\n",_d_rd, (long)getBits(_d_instr,12,31));
+          sprintf(instr[ID_D],"auipc %u, $0x%x\n",_d_rd, _d_s2);
           printf(" - ID: %s",instr[ID_D]);
           #endif
           break;
-        } 
+        }
+        case OP_UJ:{
+          _d_rd = getBits(_f_instr,7,11);
+          _d_s1 = 0;
+          _d_s2 = 0;
+          _d_rs1_ok = _d_rs2_ok = true;
+          _d_data = _d_pc + 4;
+          _d_operand_type = DOUBLE;
+          _d_alu_op = NOP;
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+
+          _d_st = TICKING;
+          #ifdef DEBUG
+          int64_t imm = (getBits(_d_instr,21,30) << 1) + 
+            (getBits(_d_instr,20,20) << 11) + 
+            (getBits(_d_instr,12,19) << 12) + 
+            (getBits(_d_instr,31,31) << 20);
+          imm = signExtend(imm,21) + _d_pc;
+          sprintf(instr[ID_D],"jal %u, %lx \n",_d_rd, imm);
+          printf(" - ID: %s",instr[ID_D]);
+          #endif
+          break;
+        }
+        case OP_LUI:{
+          _d_rd = getBits(_d_instr,7,11);
+          _d_s1 = 0;
+          _d_s2 = 0;
+          _d_rs1_ok = _d_rs2_ok = true;
+          _d_data = signExtend((getBits(_d_instr,12,31) << 12),32);
+          _d_operand_type = DOUBLE;
+          _d_alu_op = NOP;
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+          
+          _d_st = TICKING;
+          #ifdef DEBUG
+          sprintf(instr[ID_D],"lui %u, $%ld\n",_d_rd, _d_data);
+          printf(" - ID: %s",instr[ID_D]);
+          #endif
+          break;
+        }
+        case OP_JALR:{
+          _d_rd = getBits(_f_instr,7,11);
+          _d_s1 = 0;
+          _d_s2 = 0;
+          _d_rs1_ok = _d_rs2_ok = true;
+          _d_data = _d_pc + 4;
+          _d_operand_type = DOUBLE;
+          _d_alu_op = NOP;
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+
+          _d_st = TICKING;          
+          #ifdef DEBUG
+          int64_t imm = signExtend(getBits(_d_instr,20,31),12);
+          int64_t rs1=getBits(_f_instr,15,19);
+          sprintf(instr[ID_D],"jalr %u,%lx(%u)[off(rs1)]\n",_d_rd, imm,rs1);
+          printf(" - ID: %s",instr[ID_D]);
+          #endif
+          break;
+        }
         default:{
-          printf("Instruction not supported!\n");
+          printf("Instruction %x not supported!\n",_d_instr);
           return ERROR;
         }
       }
@@ -1097,10 +1727,13 @@ int CPU::EX(){
     if(_e_st == DONE){
       
       if(_e_b_op != NOP && hasPredicted(_e_b_op) ){// deal with branch prediction
+      #ifdef DEBUG
+        printf("    - EX:tobranch?: %d %d %ld==0x%lx\n",toBranch(_e_b_op,_e_odata),_d_b_op,_e_odata,(uint64_t)_e_odata);
+      #endif
         bool _e_toBranch = toBranch(_e_b_op,_e_odata);
         if(_e_toBranch != is_b_taken_pred.front()){ // wrong prediction
           #ifdef DEBUG
-          printf(" - EX: branch prediction wrong. recovering to PC=0x%lu\n",pc_recover.front());
+          printf(" - EX: branch prediction wrong. recovering to PC=0x%lx\n",pc_recover.front());
           #endif
           wrongPred();
         }else{
@@ -1110,7 +1743,7 @@ int CPU::EX(){
           correctPred();
         }
       }
-      if(_m_st == READY || _m_st == DONE){
+      if(_m_flush || (!_m_flush && (_em_valid == false))){
         _em_data = _e_odata;
         _em_data2 = _e_odata2;
         _em_rd = _e_rd;
@@ -1118,7 +1751,7 @@ int CPU::EX(){
         _em_operand_type = _e_operand_type;
         _em_valid = TRUE;
         _e_st = READY;
-        _m_flush = false;
+        if(_m_flush) {_m_flush = false; _m_st = READY;}
 
         #ifdef DEBUG
         strcpy(instr[EM_D],instr[EX_D]);
@@ -1186,12 +1819,12 @@ int CPU::EX(){
 int CPU::MEM(){
   if(!_m_flush){
     if(_m_st == DONE){
-      if(_w_st == READY || _w_st == DONE){
+      if(_w_flush || (!_w_flush && (_mw_valid == false))){
         _mw_data = _m_odata;
         _mw_rd = _m_rd;
         _mw_valid = TRUE;
         _m_st = READY;
-        _w_flush = false;
+        if(_w_flush) {_w_flush = false; _w_st = READY;}
         #ifdef DEBUG
         strcpy(instr[MW_D],instr[MEM_D]);
         #endif
@@ -1199,8 +1832,8 @@ int CPU::MEM(){
     }
     if(_m_st == READY){
       if(_em_valid){
-        _m_idata = _em_data;
-        _m_addr = _em_data2;
+        _m_idata = _em_data2;
+        _m_addr = _em_data;
         _m_rd = _em_rd;
         _m_mem_op = _em_mem_op;
         _m_operand_type = _em_operand_type;
@@ -1259,8 +1892,8 @@ int CPU::MEM(){
           case NOP:{
             // if not load or store , "_m_addr" is the outcome of ALU
             switch(_m_operand_type){
-              case WORD: _m_addr =signExtend(_m_addr & 0xffffffff, 32); break;
-              case DOUBLE: break;
+              case WORD: _m_addr = signExtend(_m_addr & 0xffffffff, 32); break;
+              case DOUBLE:break;
               default: printf(" mem_nop type error!\n"); return ERROR;
             }
             _m_odata = _m_addr;
@@ -1294,7 +1927,7 @@ int CPU::WB(){
       if(_w_rd != 0){
         regfile->greg[_w_rd] = _w_data;
         #ifdef DEBUG
-        printf(" - WB: write data 0x%lu back to reg:%d\n",_w_data,_w_rd);
+        printf(" - WB: write data 0x%lx back to reg:%d\n",_w_data,_w_rd);
         #endif
       }else{
         #ifdef DEBUG
@@ -1307,7 +1940,6 @@ int CPU::WB(){
     }
     if(_w_st == READY){
       if(_mw_valid){
-
         #ifdef DEBUG
         strcpy(instr[WB_D],instr[MW_D]);
         #endif

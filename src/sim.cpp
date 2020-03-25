@@ -31,11 +31,13 @@ int main(int argc, char ** argv){
   };
   int cnt = 1;
   sscanf(argv[2],"%d",&cnt);
-  for(;;){// into loop, each loop means one tick of the clock
+  #define DEBUG_ROUND 10000
+  for(int i = 0 ;i < DEBUG_ROUND;++i){// into loop, each loop means one tick of the clock
     int status = cpu->pl_step();
     
     cpu->printPL();
     cpu->printReg();
+    if(i == DEBUG_ROUND-1) printf("End of debug\n");
     if(status==ERROR){
       printf("CPU error!\n");
      // cpu->printReg();

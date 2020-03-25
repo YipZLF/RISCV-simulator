@@ -204,6 +204,33 @@ src/sim.cpp.s:
 	$(MAKE) -f CMakeFiles/sim.dir/build.make CMakeFiles/sim.dir/src/sim.cpp.s
 .PHONY : src/sim.cpp.s
 
+src/stats.o: src/stats.cpp.o
+
+.PHONY : src/stats.o
+
+# target to build an object file
+src/stats.cpp.o:
+	$(MAKE) -f CMakeFiles/sim.dir/build.make CMakeFiles/sim.dir/src/stats.cpp.o
+.PHONY : src/stats.cpp.o
+
+src/stats.i: src/stats.cpp.i
+
+.PHONY : src/stats.i
+
+# target to preprocess a source file
+src/stats.cpp.i:
+	$(MAKE) -f CMakeFiles/sim.dir/build.make CMakeFiles/sim.dir/src/stats.cpp.i
+.PHONY : src/stats.cpp.i
+
+src/stats.s: src/stats.cpp.s
+
+.PHONY : src/stats.s
+
+# target to generate assembly for a file
+src/stats.cpp.s:
+	$(MAKE) -f CMakeFiles/sim.dir/build.make CMakeFiles/sim.dir/src/stats.cpp.s
+.PHONY : src/stats.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -222,6 +249,9 @@ help:
 	@echo "... src/sim.o"
 	@echo "... src/sim.i"
 	@echo "... src/sim.s"
+	@echo "... src/stats.o"
+	@echo "... src/stats.i"
+	@echo "... src/stats.s"
 .PHONY : help
 
 
