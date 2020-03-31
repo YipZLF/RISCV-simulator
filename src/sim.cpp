@@ -31,8 +31,9 @@ int main(int argc, char ** argv){
   };
   int cnt = 1;
   sscanf(argv[2],"%d",&cnt);
-  #define DEBUG_ROUND 10000
+  #define DEBUG_ROUND 0x20000
   for(int i = 0 ;i < DEBUG_ROUND;++i){// into loop, each loop means one tick of the clock
+  //for(;;){
     int status = cpu->pl_step();
     
     cpu->printPL();

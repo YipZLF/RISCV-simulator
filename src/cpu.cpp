@@ -876,13 +876,15 @@ int CPU::IF(){
     #endif
   }*/
   if(_f_st == STALL){
-    _f_s1_ok = hzdDetect(_f_rs1,_f_s1,true); 
-    if(_f_s1_ok){
-      pc = _f_s1 + _f_offset;
-      
-    }else{
-      _f_st = STALL;
-      return 0;
+    #ifdef DEBUG
+    printf("   - IF: jalr still stalling\n",pc);
+    #endif 
+    if(_f_jalr){
+      _fd_instr =_f_instr;
+      _fd_pc = _f_pc;
+      if(_d_flush){_d_flush = false; _d_st = READY;}
+      _fd_valid = true;
+      _f_jalr = false;
     }
   }
   if(_f_st == DONE){
@@ -949,20 +951,10 @@ int CPU::IF(){
         // hzd detect here.
         _f_offset =  signExtend(getBits(_f_instr,20,31),12);
         _f_rs1 = getBits(_f_instr,15,19);
-        _f_s1_ok = hzdDetect(_f_rs1,_f_s1,true); 
-        if(_f_s1_ok){
-          pc = _f_s1 + _f_offset;
-          #ifdef DEBUG
-          printf("   - IF: JALR:pc = 0x%lx\n",pc);
-          #endif 
-        }else{
-          #ifdef DEBUG
-          printf("   - IF: JALR:stall \n",pc);
-          #endif 
-          _f_st = STALL;
-          return 0;
-        }
-        
+        _f_jalr = true;
+        #ifdef DEBUG
+        printf("   - IF: JALR:stall \n",pc);
+        #endif 
         break;
       } 
       case OP_AUIPC:{
@@ -980,7 +972,12 @@ int CPU::IF(){
   }
   if(_f_st == TICKING){
     simTick(_f_clk);
-    if(simTickDone(_f_clk)) _f_st = DONE;
+    if(simTickDone(_f_clk)) {
+      if(_f_jalr)
+        _f_st = STALL;
+      else
+        _f_st = DONE;
+    }
   }
   return 0;
 }
@@ -994,6 +991,16 @@ int CPU::ID(){
         _d_st = STALL;
         return 0;
       }else{
+        uint_t opcode = getBits(_d_instr,0,6);
+        if(opcode == OP_JALR) {
+          if(_f_st != STALL){ printf("   -ID: ~Error in IF state\n"); return ERROR;}
+          _f_s1 = _d_s1;
+          pc = _f_s1 + _f_offset;
+          _f_st = READY;
+          #ifdef DEBUG
+          printf(" - ID: got jalr reg value 0x%x, fwd back\n",_f_s1);
+          #endif
+        }
         _d_st = TICKING;
       }
     }
@@ -1018,6 +1025,7 @@ int CPU::ID(){
       }
     }
     if( _d_st == READY){
+      if( ! _fd_valid) return 0;
       _d_instr = _fd_instr;
       _d_pc = _fd_pc;
       _fd_valid = false;
@@ -1648,7 +1656,7 @@ int CPU::ID(){
           break;
         }
         case OP_UJ:{
-          _d_rd = getBits(_f_instr,7,11);
+          _d_rd = getBits(_d_instr,7,11);
           _d_s1 = 0;
           _d_s2 = 0;
           _d_rs1_ok = _d_rs2_ok = true;
@@ -1689,20 +1697,36 @@ int CPU::ID(){
           break;
         }
         case OP_JALR:{
-          _d_rd = getBits(_f_instr,7,11);
+          _d_rd = getBits(_d_instr,7,11);
+          _d_rs1 = getBits(_d_instr,15,19);
           _d_s1 = 0;
           _d_s2 = 0;
-          _d_rs1_ok = _d_rs2_ok = true;
+          _d_rs2_ok = true;
           _d_data = _d_pc + 4;
           _d_operand_type = DOUBLE;
           _d_alu_op = NOP;
           _d_mem_op = NOP;
           _d_b_op = NOP;
-
-          _d_st = TICKING;          
+          if(_f_st != STALL){ printf("   -ID: Error in IF state\n"); return ERROR;}
+          
+          _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
+          if(_d_rs1_ok == true){
+            _f_s1 = _d_s1;
+            pc = _f_s1 + _f_offset;
+            _f_st = READY;
+            _d_st = TICKING;
+            #ifdef DEBUG
+            printf(" - ID: got jalr reg value 0x%x, fwd back\n",_f_s1);
+            #endif
+          }else{
+            _d_st = STALL;
+            #ifdef DEBUG
+            printf(" - ID: wait for jalr reg value %d\n",_d_rs1);
+            #endif
+          }
           #ifdef DEBUG
           int64_t imm = signExtend(getBits(_d_instr,20,31),12);
-          int64_t rs1=getBits(_f_instr,15,19);
+          int64_t rs1=getBits(_d_instr,15,19);
           sprintf(instr[ID_D],"jalr %u,%lx(%u)[off(rs1)]\n",_d_rd, imm,rs1);
           printf(" - ID: %s",instr[ID_D]);
           #endif
@@ -1725,25 +1749,24 @@ int CPU::ID(){
 int CPU::EX(){
   if(!_e_flush){
     if(_e_st == DONE){
-      
-      if(_e_b_op != NOP && hasPredicted(_e_b_op) ){// deal with branch prediction
-      #ifdef DEBUG
-        printf("    - EX:tobranch?: %d %d %ld==0x%lx\n",toBranch(_e_b_op,_e_odata),_d_b_op,_e_odata,(uint64_t)_e_odata);
-      #endif
-        bool _e_toBranch = toBranch(_e_b_op,_e_odata);
-        if(_e_toBranch != is_b_taken_pred.front()){ // wrong prediction
-          #ifdef DEBUG
-          printf(" - EX: branch prediction wrong. recovering to PC=0x%lx\n",pc_recover.front());
-          #endif
-          wrongPred();
-        }else{
-          #ifdef DEBUG
-          printf(" - EX: branch prediction correct.\n");
-          #endif
-          correctPred();
-        }
-      }
       if(_m_flush || (!_m_flush && (_em_valid == false))){
+        if(_e_b_op != NOP && hasPredicted(_e_b_op) ){// deal with branch prediction
+        #ifdef DEBUG
+          printf("    - EX:tobranch?: %d %d %ld==0x%lx\n",toBranch(_e_b_op,_e_odata),_e_b_op,_e_odata,(uint64_t)_e_odata);
+        #endif
+          bool _e_toBranch = toBranch(_e_b_op,_e_odata);
+          if(_e_toBranch != is_b_taken_pred.front()){ // wrong prediction
+            #ifdef DEBUG
+            printf(" - EX: branch prediction wrong. recovering to PC=0x%lx\n",pc_recover.front());
+            #endif
+            wrongPred();
+          }else{
+            #ifdef DEBUG
+            printf(" - EX: branch prediction correct.\n");
+            #endif
+            correctPred();
+          }
+        }
         _em_data = _e_odata;
         _em_data2 = _e_odata2;
         _em_rd = _e_rd;
