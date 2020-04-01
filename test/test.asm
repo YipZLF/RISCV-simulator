@@ -1,0 +1,24 @@
+.section .text
+.globl _start
+_start:
+    addi	a0,gp,-1
+    addi	a1,gp,-2
+    addi	a2,gp,-3
+    addi	a3,gp,-4
+    addi	a4,gp,-5
+    addi	a5,gp,-6
+    addi	a6,gp,-7
+    addi	a0,gp,-1
+    addi	a1,gp,-2
+    addi	a2,gp,-3
+    addi	a3,gp,-4
+    addi	a4,gp,-5
+    addi	a5,gp,-6
+    addi	a6,gp,-7
+    addi	a0,gp,-1
+    addi	a1,gp,-2
+    addi	a2,gp,-3
+    addi	a3,gp,-4
+    addi	a4,gp,-5
+    addi	a5,gp,-6
+    addi	a6,gp,-7

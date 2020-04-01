@@ -1,0 +1,1046 @@
+@0x10000:	7f45 4c46 0201 0100 
+@0x10008:	0000 0000 0000 0000 
+@0x10010:	0200 fffffff300 0100 0000 
+@0x10018:	7800 0100 0000 0000 
+@0x10020:	4000 0000 0000 0000 
+@0x10028:	ffffff9802 0000 0000 0000 
+@0x10030:	0400 0000 4000 3800 
+@0x10038:	0100 4000 0600 0500 
+@0x10040:	0100 0000 0500 0000 
+@0x10048:	0000 0000 0000 0000 
+@0x10050:	0000 0100 0000 0000 
+@0x10058:	0000 0100 0000 0000 
+@0x10060:	ffffffcc00 0000 0000 0000 
+@0x10068:	ffffffcc00 0000 0000 0000 
+@0x10070:	0010 0000 0000 0000 
+@0x10078:	13ffffff85 fffffff1ffffffff ffffff93ffffff85 ffffffe1ffffffff 
+@0x10080:	13ffffff86 ffffffd1ffffffff ffffff93ffffff86 ffffffc1ffffffff 
+@0x10088:	13ffffff87 ffffffb1ffffffff ffffff93ffffff87 ffffffa1ffffffff 
+@0x10090:	13ffffff88 ffffff91ffffffff 13ffffff85 fffffff1ffffffff 
+@0x10098:	ffffff93ffffff85 ffffffe1ffffffff 13ffffff86 ffffffd1ffffffff 
+@0x100a0:	ffffff93ffffff86 ffffffc1ffffffff 13ffffff87 ffffffb1ffffffff 
+@0x100a8:	ffffff93ffffff87 ffffffa1ffffffff 13ffffff88 ffffff91ffffffff 
+@0x100b0:	13ffffff85 fffffff1ffffffff ffffff93ffffff85 ffffffe1ffffffff 
+@0x100b8:	13ffffff86 ffffffd1ffffffff ffffff93ffffff86 ffffffc1ffffffff 
+@0x100c0:	13ffffff87 ffffffb1ffffffff ffffff93ffffff87 ffffffa1ffffffff 
+@0x100c8:	13ffffff88 ffffff91ffffffff 0000 0000 
+CPU pc:10078
+
+ - IF: Bubble
+
+ - IF: PC:10078,  Instr:0xfff18513
+-------Pipeline stage---------
+ - IF = DNE: PC:10078,  Instr:0xfff18513
+  - fd v=0 b=0 : pc:0x0, instr:0x0
+ - ID = DNE: Bubble
+  - de v=0 b=0 : 
+ - EX = DNE: 
+  - em v=0 b=0 : 
+ - MEM = DNE: 
+  - mw v=0 b=0 : 
+ - WB = DNE: 
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+
+ - IF: PC:1007c,  Instr:0xffe18593
+-------Pipeline stage---------
+ - IF = DNE: PC:1007c,  Instr:0xffe18593
+  - fd v=1 b=0 : pc:0x10078, instr:0xfff18513
+ - ID = RDY: 
+  - de v=1 b=1 : Bubble
+ - EX = RDY: 
+  - em v=1 b=1 : 
+ - MEM = RDY: 
+  - mw v=1 b=1 : 
+ - WB = DNE: 
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+    - ID: at 0x10078 fetched 0xfff18513 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 10, 3, $-1
+
+ - IF: PC:10080,  Instr:0xffd18613
+-------Pipeline stage---------
+ - IF = DNE: PC:10080,  Instr:0xffd18613
+  - fd v=1 b=0 : pc:0x1007c, instr:0xffe18593
+ - ID = DNE: addi 10, 3, $-1
+  - de v=0 b=0 : Bubble
+ - EX = DNE: Bubble
+  - em v=0 b=0 : 
+ - MEM = DNE: 
+  - mw v=0 b=0 : 
+ - WB = DNE: 
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+    - ID: at 0x1007c fetched 0xffe18593 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 11, 3, $-2
+
+ - IF: PC:10084,  Instr:0xffc18693
+-------Pipeline stage---------
+ - IF = DNE: PC:10084,  Instr:0xffc18693
+  - fd v=1 b=0 : pc:0x10080, instr:0xffd18613
+ - ID = DNE: addi 11, 3, $-2
+  - de v=1 b=0 : addi 10, 3, $-1
+ - EX = RDY: 
+  - em v=1 b=1 : Bubble
+ - MEM = RDY: 
+  - mw v=1 b=1 : 
+ - WB = DNE: 
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xffffffffffffffff, _e_odata: 0xffffffffffffffff
+    - ID: at 0x10080 fetched 0xffd18613 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 12, 3, $-3
+
+ - IF: PC:10088,  Instr:0xffb18713
+-------Pipeline stage---------
+ - IF = DNE: PC:10088,  Instr:0xffb18713
+  - fd v=1 b=0 : pc:0x10084, instr:0xffc18693
+ - ID = DNE: addi 12, 3, $-3
+  - de v=1 b=0 : addi 11, 3, $-2
+ - EX = DNE: addi 10, 3, $-1
+  - em v=0 b=0 : Bubble
+ - MEM = DNE: Bubble
+  - mw v=0 b=0 : 
+ - WB = DNE: 
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffe, _e_odata: 0xfffffffffffffffe
+    - ID: at 0x10084 fetched 0xffc18693 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 13, 3, $-4
+
+ - IF: PC:1008c,  Instr:0xffa18793
+-------Pipeline stage---------
+ - IF = DNE: PC:1008c,  Instr:0xffa18793
+  - fd v=1 b=0 : pc:0x10088, instr:0xffb18713
+ - ID = DNE: addi 13, 3, $-4
+  - de v=1 b=0 : addi 12, 3, $-3
+ - EX = DNE: addi 11, 3, $-2
+  - em v=1 b=0 : addi 10, 3, $-1
+ - MEM = RDY: 
+  - mw v=1 b=1 : Bubble
+ - WB = DNE: 
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffd, _e_odata: 0xfffffffffffffffd
+    - ID: at 0x10088 fetched 0xffb18713 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 14, 3, $-5
+
+ - IF: PC:10090,  Instr:0xff918813
+-------Pipeline stage---------
+ - IF = DNE: PC:10090,  Instr:0xff918813
+  - fd v=1 b=0 : pc:0x1008c, instr:0xffa18793
+ - ID = DNE: addi 14, 3, $-5
+  - de v=1 b=0 : addi 13, 3, $-4
+ - EX = DNE: addi 12, 3, $-3
+  - em v=1 b=0 : addi 11, 3, $-2
+ - MEM = TCK: addi 10, 3, $-1
+  - mw v=0 b=0 : Bubble
+ - WB = DNE: Bubble
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:10090,  Instr:0xff918813
+  - fd v=1 b=0 : pc:0x1008c, instr:0xffa18793
+ - ID = DNE: addi 14, 3, $-5
+  - de v=1 b=0 : addi 13, 3, $-4
+ - EX = DNE: 
+  - em v=1 b=0 : addi 12, 3, $-3
+ - MEM = DNE: addi 10, 3, $-1
+  - mw v=0 b=0 : Bubble
+ - WB = DNE: Bubble
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffc, _e_odata: 0xfffffffffffffffc
+    - ID: at 0x1008c fetched 0xffa18793 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 15, 3, $-6
+
+ - IF: PC:10094,  Instr:0xfff18513
+-------Pipeline stage---------
+ - IF = DNE: PC:10094,  Instr:0xfff18513
+  - fd v=1 b=0 : pc:0x10090, instr:0xff918813
+ - ID = DNE: addi 15, 3, $-6
+  - de v=1 b=0 : addi 14, 3, $-5
+ - EX = DNE: addi 13, 3, $-4
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 12, 3, $-3
+  - mw v=1 b=0 : addi 10, 3, $-1
+ - WB = DNE: Bubble
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:10094,  Instr:0xfff18513
+  - fd v=1 b=0 : pc:0x10090, instr:0xff918813
+ - ID = DNE: addi 15, 3, $-6
+  - de v=1 b=0 : addi 14, 3, $-5
+ - EX = DNE: 
+  - em v=1 b=0 : addi 13, 3, $-4
+ - MEM = DNE: addi 12, 3, $-3
+  - mw v=0 b=0 : addi 10, 3, $-1
+ - WB = DNE: addi 10, 3, $-1
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffb, _e_odata: 0xfffffffffffffffb
+    - ID: at 0x10090 fetched 0xff918813 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 16, 3, $-7
+
+ - IF: PC:10098,  Instr:0xffe18593
+-------Pipeline stage---------
+ - IF = DNE: PC:10098,  Instr:0xffe18593
+  - fd v=1 b=0 : pc:0x10094, instr:0xfff18513
+ - ID = DNE: addi 16, 3, $-7
+  - de v=1 b=0 : addi 15, 3, $-6
+ - EX = DNE: addi 14, 3, $-5
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 13, 3, $-4
+  - mw v=1 b=0 : addi 12, 3, $-3
+ - WB = DNE: addi 10, 3, $-1
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:10098,  Instr:0xffe18593
+  - fd v=1 b=0 : pc:0x10094, instr:0xfff18513
+ - ID = DNE: addi 16, 3, $-7
+  - de v=1 b=0 : addi 15, 3, $-6
+ - EX = DNE: 
+  - em v=1 b=0 : addi 14, 3, $-5
+ - MEM = DNE: addi 13, 3, $-4
+  - mw v=0 b=0 : addi 12, 3, $-3
+ - WB = DNE: addi 12, 3, $-3
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffa, _e_odata: 0xfffffffffffffffa
+    - ID: at 0x10094 fetched 0xfff18513 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 10, 3, $-1
+
+ - IF: PC:1009c,  Instr:0xffd18613
+-------Pipeline stage---------
+ - IF = DNE: PC:1009c,  Instr:0xffd18613
+  - fd v=1 b=0 : pc:0x10098, instr:0xffe18593
+ - ID = DNE: addi 10, 3, $-1
+  - de v=1 b=0 : addi 16, 3, $-7
+ - EX = DNE: addi 15, 3, $-6
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 14, 3, $-5
+  - mw v=1 b=0 : addi 13, 3, $-4
+ - WB = DNE: addi 12, 3, $-3
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:1009c,  Instr:0xffd18613
+  - fd v=1 b=0 : pc:0x10098, instr:0xffe18593
+ - ID = DNE: addi 10, 3, $-1
+  - de v=1 b=0 : addi 16, 3, $-7
+ - EX = DNE: 
+  - em v=1 b=0 : addi 15, 3, $-6
+ - MEM = DNE: addi 14, 3, $-5
+  - mw v=0 b=0 : addi 13, 3, $-4
+ - WB = DNE: addi 13, 3, $-4
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffff9, _e_odata: 0xfffffffffffffff9
+    - ID: at 0x10098 fetched 0xffe18593 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 11, 3, $-2
+
+ - IF: PC:100a0,  Instr:0xffc18693
+-------Pipeline stage---------
+ - IF = DNE: PC:100a0,  Instr:0xffc18693
+  - fd v=1 b=0 : pc:0x1009c, instr:0xffd18613
+ - ID = DNE: addi 11, 3, $-2
+  - de v=1 b=0 : addi 10, 3, $-1
+ - EX = DNE: addi 16, 3, $-7
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 15, 3, $-6
+  - mw v=1 b=0 : addi 14, 3, $-5
+ - WB = DNE: addi 13, 3, $-4
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100a0,  Instr:0xffc18693
+  - fd v=1 b=0 : pc:0x1009c, instr:0xffd18613
+ - ID = DNE: addi 11, 3, $-2
+  - de v=1 b=0 : addi 10, 3, $-1
+ - EX = DNE: 
+  - em v=1 b=0 : addi 16, 3, $-7
+ - MEM = DNE: addi 15, 3, $-6
+  - mw v=0 b=0 : addi 14, 3, $-5
+ - WB = DNE: addi 14, 3, $-5
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xffffffffffffffff, _e_odata: 0xffffffffffffffff
+    - ID: at 0x1009c fetched 0xffd18613 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 12, 3, $-3
+
+ - IF: PC:100a4,  Instr:0xffb18713
+-------Pipeline stage---------
+ - IF = DNE: PC:100a4,  Instr:0xffb18713
+  - fd v=1 b=0 : pc:0x100a0, instr:0xffc18693
+ - ID = DNE: addi 12, 3, $-3
+  - de v=1 b=0 : addi 11, 3, $-2
+ - EX = DNE: addi 10, 3, $-1
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 16, 3, $-7
+  - mw v=1 b=0 : addi 15, 3, $-6
+ - WB = DNE: addi 14, 3, $-5
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100a4,  Instr:0xffb18713
+  - fd v=1 b=0 : pc:0x100a0, instr:0xffc18693
+ - ID = DNE: addi 12, 3, $-3
+  - de v=1 b=0 : addi 11, 3, $-2
+ - EX = DNE: 
+  - em v=1 b=0 : addi 10, 3, $-1
+ - MEM = DNE: addi 16, 3, $-7
+  - mw v=0 b=0 : addi 15, 3, $-6
+ - WB = DNE: addi 15, 3, $-6
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffe, _e_odata: 0xfffffffffffffffe
+    - ID: at 0x100a0 fetched 0xffc18693 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 13, 3, $-4
+
+ - IF: PC:100a8,  Instr:0xffa18793
+-------Pipeline stage---------
+ - IF = DNE: PC:100a8,  Instr:0xffa18793
+  - fd v=1 b=0 : pc:0x100a4, instr:0xffb18713
+ - ID = DNE: addi 13, 3, $-4
+  - de v=1 b=0 : addi 12, 3, $-3
+ - EX = DNE: addi 11, 3, $-2
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 10, 3, $-1
+  - mw v=1 b=0 : addi 16, 3, $-7
+ - WB = DNE: addi 15, 3, $-6
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100a8,  Instr:0xffa18793
+  - fd v=1 b=0 : pc:0x100a4, instr:0xffb18713
+ - ID = DNE: addi 13, 3, $-4
+  - de v=1 b=0 : addi 12, 3, $-3
+ - EX = DNE: 
+  - em v=1 b=0 : addi 11, 3, $-2
+ - MEM = DNE: addi 10, 3, $-1
+  - mw v=0 b=0 : addi 16, 3, $-7
+ - WB = DNE: addi 16, 3, $-7
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffd, _e_odata: 0xfffffffffffffffd
+    - ID: at 0x100a4 fetched 0xffb18713 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 14, 3, $-5
+
+ - IF: PC:100ac,  Instr:0xff918813
+-------Pipeline stage---------
+ - IF = DNE: PC:100ac,  Instr:0xff918813
+  - fd v=1 b=0 : pc:0x100a8, instr:0xffa18793
+ - ID = DNE: addi 14, 3, $-5
+  - de v=1 b=0 : addi 13, 3, $-4
+ - EX = DNE: addi 12, 3, $-3
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 11, 3, $-2
+  - mw v=1 b=0 : addi 10, 3, $-1
+ - WB = DNE: addi 16, 3, $-7
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100ac,  Instr:0xff918813
+  - fd v=1 b=0 : pc:0x100a8, instr:0xffa18793
+ - ID = DNE: addi 14, 3, $-5
+  - de v=1 b=0 : addi 13, 3, $-4
+ - EX = DNE: 
+  - em v=1 b=0 : addi 12, 3, $-3
+ - MEM = DNE: addi 11, 3, $-2
+  - mw v=0 b=0 : addi 10, 3, $-1
+ - WB = DNE: addi 10, 3, $-1
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffc, _e_odata: 0xfffffffffffffffc
+    - ID: at 0x100a8 fetched 0xffa18793 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 15, 3, $-6
+
+ - IF: PC:100b0,  Instr:0xfff18513
+-------Pipeline stage---------
+ - IF = DNE: PC:100b0,  Instr:0xfff18513
+  - fd v=1 b=0 : pc:0x100ac, instr:0xff918813
+ - ID = DNE: addi 15, 3, $-6
+  - de v=1 b=0 : addi 14, 3, $-5
+ - EX = DNE: addi 13, 3, $-4
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 12, 3, $-3
+  - mw v=1 b=0 : addi 11, 3, $-2
+ - WB = DNE: addi 10, 3, $-1
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100b0,  Instr:0xfff18513
+  - fd v=1 b=0 : pc:0x100ac, instr:0xff918813
+ - ID = DNE: addi 15, 3, $-6
+  - de v=1 b=0 : addi 14, 3, $-5
+ - EX = DNE: 
+  - em v=1 b=0 : addi 13, 3, $-4
+ - MEM = DNE: addi 12, 3, $-3
+  - mw v=0 b=0 : addi 11, 3, $-2
+ - WB = DNE: addi 11, 3, $-2
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffb, _e_odata: 0xfffffffffffffffb
+    - ID: at 0x100ac fetched 0xff918813 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 16, 3, $-7
+
+ - IF: PC:100b4,  Instr:0xffe18593
+-------Pipeline stage---------
+ - IF = DNE: PC:100b4,  Instr:0xffe18593
+  - fd v=1 b=0 : pc:0x100b0, instr:0xfff18513
+ - ID = DNE: addi 16, 3, $-7
+  - de v=1 b=0 : addi 15, 3, $-6
+ - EX = DNE: addi 14, 3, $-5
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 13, 3, $-4
+  - mw v=1 b=0 : addi 12, 3, $-3
+ - WB = DNE: addi 11, 3, $-2
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100b4,  Instr:0xffe18593
+  - fd v=1 b=0 : pc:0x100b0, instr:0xfff18513
+ - ID = DNE: addi 16, 3, $-7
+  - de v=1 b=0 : addi 15, 3, $-6
+ - EX = DNE: 
+  - em v=1 b=0 : addi 14, 3, $-5
+ - MEM = DNE: addi 13, 3, $-4
+  - mw v=0 b=0 : addi 12, 3, $-3
+ - WB = DNE: addi 12, 3, $-3
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffa, _e_odata: 0xfffffffffffffffa
+    - ID: at 0x100b0 fetched 0xfff18513 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 10, 3, $-1
+
+ - IF: PC:100b8,  Instr:0xffd18613
+-------Pipeline stage---------
+ - IF = DNE: PC:100b8,  Instr:0xffd18613
+  - fd v=1 b=0 : pc:0x100b4, instr:0xffe18593
+ - ID = DNE: addi 10, 3, $-1
+  - de v=1 b=0 : addi 16, 3, $-7
+ - EX = DNE: addi 15, 3, $-6
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 14, 3, $-5
+  - mw v=1 b=0 : addi 13, 3, $-4
+ - WB = DNE: addi 12, 3, $-3
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100b8,  Instr:0xffd18613
+  - fd v=1 b=0 : pc:0x100b4, instr:0xffe18593
+ - ID = DNE: addi 10, 3, $-1
+  - de v=1 b=0 : addi 16, 3, $-7
+ - EX = DNE: 
+  - em v=1 b=0 : addi 15, 3, $-6
+ - MEM = DNE: addi 14, 3, $-5
+  - mw v=0 b=0 : addi 13, 3, $-4
+ - WB = DNE: addi 13, 3, $-4
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffff9, _e_odata: 0xfffffffffffffff9
+    - ID: at 0x100b4 fetched 0xffe18593 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 11, 3, $-2
+
+ - IF: PC:100bc,  Instr:0xffc18693
+-------Pipeline stage---------
+ - IF = DNE: PC:100bc,  Instr:0xffc18693
+  - fd v=1 b=0 : pc:0x100b8, instr:0xffd18613
+ - ID = DNE: addi 11, 3, $-2
+  - de v=1 b=0 : addi 10, 3, $-1
+ - EX = DNE: addi 16, 3, $-7
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 15, 3, $-6
+  - mw v=1 b=0 : addi 14, 3, $-5
+ - WB = DNE: addi 13, 3, $-4
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100bc,  Instr:0xffc18693
+  - fd v=1 b=0 : pc:0x100b8, instr:0xffd18613
+ - ID = DNE: addi 11, 3, $-2
+  - de v=1 b=0 : addi 10, 3, $-1
+ - EX = DNE: 
+  - em v=1 b=0 : addi 16, 3, $-7
+ - MEM = DNE: addi 15, 3, $-6
+  - mw v=0 b=0 : addi 14, 3, $-5
+ - WB = DNE: addi 14, 3, $-5
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xffffffffffffffff, _e_odata: 0xffffffffffffffff
+    - ID: at 0x100b8 fetched 0xffd18613 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 12, 3, $-3
+
+ - IF: PC:100c0,  Instr:0xffb18713
+-------Pipeline stage---------
+ - IF = DNE: PC:100c0,  Instr:0xffb18713
+  - fd v=1 b=0 : pc:0x100bc, instr:0xffc18693
+ - ID = DNE: addi 12, 3, $-3
+  - de v=1 b=0 : addi 11, 3, $-2
+ - EX = DNE: addi 10, 3, $-1
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 16, 3, $-7
+  - mw v=1 b=0 : addi 15, 3, $-6
+ - WB = DNE: addi 14, 3, $-5
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100c0,  Instr:0xffb18713
+  - fd v=1 b=0 : pc:0x100bc, instr:0xffc18693
+ - ID = DNE: addi 12, 3, $-3
+  - de v=1 b=0 : addi 11, 3, $-2
+ - EX = DNE: 
+  - em v=1 b=0 : addi 10, 3, $-1
+ - MEM = DNE: addi 16, 3, $-7
+  - mw v=0 b=0 : addi 15, 3, $-6
+ - WB = DNE: addi 15, 3, $-6
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffe, _e_odata: 0xfffffffffffffffe
+    - ID: at 0x100bc fetched 0xffc18693 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 13, 3, $-4
+
+ - IF: PC:100c4,  Instr:0xffa18793
+-------Pipeline stage---------
+ - IF = DNE: PC:100c4,  Instr:0xffa18793
+  - fd v=1 b=0 : pc:0x100c0, instr:0xffb18713
+ - ID = DNE: addi 13, 3, $-4
+  - de v=1 b=0 : addi 12, 3, $-3
+ - EX = DNE: addi 11, 3, $-2
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 10, 3, $-1
+  - mw v=1 b=0 : addi 16, 3, $-7
+ - WB = DNE: addi 15, 3, $-6
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100c4,  Instr:0xffa18793
+  - fd v=1 b=0 : pc:0x100c0, instr:0xffb18713
+ - ID = DNE: addi 13, 3, $-4
+  - de v=1 b=0 : addi 12, 3, $-3
+ - EX = DNE: 
+  - em v=1 b=0 : addi 11, 3, $-2
+ - MEM = DNE: addi 10, 3, $-1
+  - mw v=0 b=0 : addi 16, 3, $-7
+ - WB = DNE: addi 16, 3, $-7
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffd, _e_odata: 0xfffffffffffffffd
+    - ID: at 0x100c0 fetched 0xffb18713 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 14, 3, $-5
+
+ - IF: PC:100c8,  Instr:0xff918813
+-------Pipeline stage---------
+ - IF = DNE: PC:100c8,  Instr:0xff918813
+  - fd v=1 b=0 : pc:0x100c4, instr:0xffa18793
+ - ID = DNE: addi 14, 3, $-5
+  - de v=1 b=0 : addi 13, 3, $-4
+ - EX = DNE: addi 12, 3, $-3
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 11, 3, $-2
+  - mw v=1 b=0 : addi 10, 3, $-1
+ - WB = DNE: addi 16, 3, $-7
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100c8,  Instr:0xff918813
+  - fd v=1 b=0 : pc:0x100c4, instr:0xffa18793
+ - ID = DNE: addi 14, 3, $-5
+  - de v=1 b=0 : addi 13, 3, $-4
+ - EX = DNE: 
+  - em v=1 b=0 : addi 12, 3, $-3
+ - MEM = DNE: addi 11, 3, $-2
+  - mw v=0 b=0 : addi 10, 3, $-1
+ - WB = DNE: addi 10, 3, $-1
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffc, _e_odata: 0xfffffffffffffffc
+    - ID: at 0x100c4 fetched 0xffa18793 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 15, 3, $-6
+
+ - IF: PC:100cc,  Instr:0x0
+ - IF: failure when reading from 0x100cc
+-------Pipeline stage---------
+ - IF = DNE: PC:100cc,  Instr:0x0
+  - fd v=1 b=0 : pc:0x100c8, instr:0xff918813
+ - ID = DNE: addi 15, 3, $-6
+  - de v=1 b=0 : addi 14, 3, $-5
+ - EX = DNE: addi 13, 3, $-4
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 12, 3, $-3
+  - mw v=1 b=0 : addi 11, 3, $-2
+ - WB = DNE: addi 10, 3, $-1
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100cc,  Instr:0x0
+  - fd v=1 b=0 : pc:0x100c8, instr:0xff918813
+ - ID = DNE: addi 15, 3, $-6
+  - de v=1 b=0 : addi 14, 3, $-5
+ - EX = DNE: 
+  - em v=1 b=0 : addi 13, 3, $-4
+ - MEM = DNE: addi 12, 3, $-3
+  - mw v=0 b=0 : addi 11, 3, $-2
+ - WB = DNE: addi 11, 3, $-2
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffb, _e_odata: 0xfffffffffffffffb
+    - ID: at 0x100c8 fetched 0xff918813 
+    - HzdDect: rs = 3
+    - HzdDect: no hzd, read 0 from greg
+ - ID:addi 16, 3, $-7
+
+ - IF: PC:100d0,  Instr:0x0
+ - IF: failure when reading from 0x100d0
+-------Pipeline stage---------
+ - IF = DNE: PC:100d0,  Instr:0x0
+  - fd v=1 b=0 : pc:0x100cc, instr:0x0
+ - ID = DNE: addi 16, 3, $-7
+  - de v=1 b=0 : addi 15, 3, $-6
+ - EX = DNE: addi 14, 3, $-5
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 13, 3, $-4
+  - mw v=1 b=0 : addi 12, 3, $-3
+ - WB = DNE: addi 11, 3, $-2
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+-------Pipeline stage---------
+ - IF = DNE: PC:100d0,  Instr:0x0
+  - fd v=1 b=0 : pc:0x100cc, instr:0x0
+ - ID = DNE: addi 16, 3, $-7
+  - de v=1 b=0 : addi 15, 3, $-6
+ - EX = DNE: 
+  - em v=1 b=0 : addi 14, 3, $-5
+ - MEM = DNE: addi 13, 3, $-4
+  - mw v=0 b=0 : addi 12, 3, $-3
+ - WB = DNE: addi 12, 3, $-3
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+ - EX: s1: 0x0, s2: 0xfffffffffffffffa, _e_odata: 0xfffffffffffffffa
+    - ID: at 0x100cc fetched 0x0 
+ - ID: failure when decoding 0x0
+Instruction 0 not supported!
+-------Pipeline stage---------
+ - IF = DNE: PC:100d0,  Instr:0x0
+  - fd v=1 b=0 : pc:0x100cc, instr:0x0
+ - ID = RDY: 
+  - de v=1 b=0 : addi 16, 3, $-7
+ - EX = DNE: addi 15, 3, $-6
+  - em v=1 b=0 : 
+ - MEM = TCK: addi 14, 3, $-5
+  - mw v=1 b=0 : addi 13, 3, $-4
+ - WB = DNE: addi 12, 3, $-3
+-------Reg file stage---------
+ x0: 0x0	 x1: 0x0	 x2: 0x100000	 x3: 0x0
+ x4: 0x0	 x5: 0x0	 x6: 0x0	 x7: 0x0
+ x8: 0x0	 x9: 0x0	 x10: 0x0	 x11: 0x0
+ x12: 0x0	 x13: 0x0	 x14: 0x0	 x15: 0x0
+ x16: 0x0	 x17: 0x0	 x18: 0x0	 x19: 0x0
+ x20: 0x0	 x21: 0x0	 x22: 0x0	 x23: 0x0
+ x24: 0x0	 x25: 0x0	 x26: 0x0	 x27: 0x0
+ x28: 0x0	 x29: 0x0	 x30: 0x0	 x31: 0x0
+------------------------------
+
+CPU error!

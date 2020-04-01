@@ -39,10 +39,7 @@ class CPU{
   std::deque<uint64_t> pc_recover;
   std::deque<bool> is_b_taken_pred;
   void wrongPred(){
-    _d_flush = true;
-    _e_flush = true;
-    _f_st = READY;
-    _f_jalr = false;
+    _f_bub = _fd_bub = _de_bub = true;
     pc = pc_recover.front(); 
     pc_recover.clear();
     is_b_taken_pred.clear();
@@ -56,108 +53,57 @@ class CPU{
   }
 /* Internal CPU states register*/
 
-bool _f_b_pred_error,_f_jalr;
+bool _f_b_pred_error,_f_jalr,_f_stall,_f_bub;
 int _f_st, _f_clk,_f_rs1;
 uint64_t _f_pc;
 int64_t _f_offset,_f_s1;
 uint32_t _f_instr;
 
-bool _fd_valid;
+bool _fd_valid, _fd_stall,_fd_bub;
 uint64_t _fd_pc;
 uint32_t _fd_instr;
 
-bool _d_flush,_d_rs1_ok,_d_rs2_ok;
-int _d_st, _d_clk,_d_rd,_d_alu_op,_d_b_op,_d_mem_op,_d_operand_type,_d_rs1,_d_rs2;
+bool _d_flush,_d_rs1_ok,_d_rs2_ok,_d_bub;
+int _d_st, _d_clk,_d_rd,_d_alu_op,_d_b_op,_d_mem_op,_d_operand_type,_d_rs1,_d_rs2,_d_opcode;
 int64_t _d_s1,_d_s2,_d_data;
 uint64_t _d_pc;
 uint32_t _d_instr;
 
-bool _de_valid;
+bool _de_valid,_de_stall,_de_bub;
 int64_t _de_data,_de_s1,_de_s2;
-int _de_rd,_de_b_op,_de_alu_op,_de_mem_op,_de_operand_type;
+int _de_rd,_de_b_op,_de_alu_op,_de_mem_op,_de_operand_type,_de_opcode;
 
 bool _e_flush;
 int _e_st, _e_clk;
 int64_t _e_odata,_e_odata2,_e_idata,_e_s1,_e_s2;
-int _e_rd,_e_b_op,_e_alu_op,_e_mem_op,_e_operand_type;
+int _e_rd,_e_b_op,_e_alu_op,_e_mem_op,_e_operand_type,_e_opcode;
 
-bool _em_valid;
+bool _em_valid,_em_stall,_em_bub;
 int64_t _em_data,_em_data2;
-int _em_rd,_em_mem_op,_em_operand_type;
+int _em_rd,_em_mem_op,_em_operand_type,_em_opcode;
 
 bool _m_flush;
 int _m_st, _m_clk;
 int64_t _m_idata,_m_odata;
 uint64_t _m_addr;
-int _m_rd,_m_mem_op,_m_operand_type;
+int _m_rd,_m_mem_op,_m_operand_type,_m_opcode;
 
-bool _mw_valid;
+bool _mw_valid,_mw_stall,_mw_bub;
 int64_t _mw_data;
-int _mw_rd;
+int _mw_rd,_mw_opcode;
 
 bool _w_flush;
 int _w_st, _w_clk;
 int64_t _w_data;
-int _w_rd;
+int _w_rd,_w_opcode;
 
 
 
-/*int if_clk, id_clk, ex_clk, mem_clk, wb_clk;
 
-uint64_t _pc_next,_pc_branch;
-std::queue<bool> _b_pred_flags;
-bool _toBranch;
-
-bool _f_b_pred_err = false;  // Is former branch predict wrong?
-uint64_t _f_b_crt_pc; // If yes, then what should the correct branch PC be?
-
-int _f_state,_f_clk;
-uint64_t _f_pc = 0,_f_instr = 0;
-
-uint_t _fd_state;
-uint64_t _fd_pc,_fd_instr;// deliver pc relative value to decode stage
-
-
-int _d_state,_d_clk;
-bool _d_s1_ok,_d_s2_ok;
-int64_t _d_s1,_d_s2;
-uint_t _d_alu_op,
-       _d_mem_op, 
-       _d_wb_op, 
-       _d_b_op,
-       _d_pc_source,
-       _d_operand_type,
-       _d_rs1,
-       _d_rs2,
-       _d_rd;
-
-int64_t _de_s1,_de_s2;
-bool _de_valid;
-uint_t _de_alu_op,
-       _de_mem_op, 
-       _de_wb_op, 
-       _de_b_op,
-       _de_pc_source,
-       _de_operand_type,
-       _de_rd;
-    
-int _e_state,_e_clk;
-int64_t _e_alu_d;
-
-uint_t _em_alu_d;
-uint_t _em_rd;
-int _m_state;
-uint_t _mw_mem_d;
-uint_t _mw_rd;
-int _w_state;
-uint_t _w_wb_d;
-
-*/
 bool hzdDetect(int rs,int64_t & s){
   #ifdef DEBUG
   printf("    - HzdDect: rs = %d\n",rs);
   #endif
-  bool hzd_exist = false;
   if(rs == ZERO){
     #ifdef DEBUG
     printf("    - HzdDect: fwd ZERO\n");
@@ -165,101 +111,134 @@ bool hzdDetect(int rs,int64_t & s){
     s = 0; return true;
   }
   if(rs == _de_rd && _de_valid){ 
-    hzd_exist = true;
-    if( _de_mem_op == MREAD){
-      #ifdef DEBUG
-      printf("    - HzdDect: with memory read _m_odata but not ready\n");
-      #endif
-      return false;
-    }else if( _de_mem_op == MWRITE ){
-      printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _em_rd);
-      return false;
-    }else if( _de_mem_op == NOP){
-      if(_de_alu_op == NOP){  // only forward constant, like lui/ auipc
-        s = _de_data;
+    switch(_de_opcode){
+      case OP_JALR:
+      case OP_UJ:
+      case OP_AUIPC:
+      case OP_LUI: {
+        s = _de_data; 
         #ifdef DEBUG
         printf("    - HzdDect: fwd _de_data %lx \n",_de_data);
         #endif
         return true;
-      }else{
-        #ifdef DEBUG
-        printf("    - HzdDect: not ready until ALU is done\n");
-        #endif
-        return false;
-      }
+        break;}
+      default: return false;
     }
   }
   if( rs == _e_rd ){
-    hzd_exist = true;
-    if(_e_mem_op == MREAD){
-      if(_e_st != READY) {
-        #ifdef DEBUG
-        printf("    - HzdDect: with memory read _m_odata but not ready\n");
-        #endif
-        return false;
-      }
-      hzd_exist = true;// not return, see if rs matchs with _em_rd or _m_rd
-    }else if(_e_mem_op == MWRITE){
-      printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _em_rd);
-      return false;
-    }else if( _e_mem_op == NOP ){
-      if(_e_alu_op == NOP){
+    switch(_e_opcode){
+      case OP_JALR:
+      case OP_UJ:
+      case OP_AUIPC:
+      case OP_LUI:{
         s = _e_idata;
         #ifdef DEBUG
         printf("    - HzdDect: fwd _e_idata %lx \n",_e_idata);
         #endif
         return true;
-      }else{ //_e_alu_op != NOP
-        if( (!_e_flush && (_e_st == DONE )) ){
+      }
+      case OP_R:
+      case OP_R_W:
+      case OP_IMM:
+      case OP_IMM_W:{
+        if(_e_st == DONE){
           s = _e_odata;
           #ifdef DEBUG
           printf("    - HzdDect: fwd _e_odata %lx \n",_e_odata);
           #endif
           return true; // s is ready
-        }else{ // not ready
+        }else{
           #ifdef DEBUG
           printf("    - HzdDect: with _e_odata but not ready\n");
           #endif
           return false;
         }
       }
+      default:{          
+        #ifdef DEBUG
+        printf("    - HzdDect: wait till mem\n");
+        #endif
+        return false;
+      }
     }
   }
   if( rs == _em_rd && _em_valid){
-    hzd_exist = true;
-    if( _em_mem_op == NOP ){ // no operation of memory. so rd must have been ready
-      s = _em_data;
-      #ifdef DEBUG
-      printf("    - HzdDect: fwd _em_data %lx \n",_m_odata);
-      #endif
-      return true;
-    }else if( _em_mem_op == MREAD){
-      #ifdef DEBUG
-      printf("    - HzdDect: with memory read _m_odata but not ready\n");
-      #endif
-      return false;
-    }else if( _em_mem_op == MWRITE){
-      printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _em_rd);
-      return false;
+    switch(_em_opcode){
+      case OP_JALR:
+      case OP_UJ:
+      case OP_AUIPC:
+      case OP_LUI:
+      case OP_R:
+      case OP_R_W:
+      case OP_IMM:
+      case OP_IMM_W:{
+        s = _em_data;
+        #ifdef DEBUG
+        printf("    - HzdDect: fwd _em_data %lx \n",_m_odata);
+        #endif
+        return true;
+      }
+      case OP_LOAD:{
+        #ifdef DEBUG
+        printf("    - HzdDect: with memory read _m_odata but not ready\n");
+        #endif
+        return false;
+      }
+      case OP_STORE:{
+        printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _em_rd);
+        return false;
+      }
+      default:{          
+        #ifdef DEBUG
+        printf("    - HzdDect: wait\n");
+        #endif
+        return false;
+      }
     }
   }
   if( rs == _m_rd ){
-    hzd_exist = true;
-    if( !_m_flush && (_m_st == DONE ) ){
-      s = _m_odata;
-      #ifdef DEBUG
-      printf("    - HzdDect: fwd _m_odata %lx \n",_m_odata);
-      #endif
-      return true;
-    }else{ // not ready
-      #ifdef DEBUG
-      printf("    - HzdDect: with _m_odata but not ready\n");
-      #endif
-      return false;
+    switch(_m_opcode){
+      case OP_JALR:
+      case OP_UJ:
+      case OP_AUIPC:
+      case OP_LUI:
+      case OP_R:
+      case OP_R_W:
+      case OP_IMM:
+      case OP_IMM_W:{
+        s = _m_odata;
+        #ifdef DEBUG
+        printf("    - HzdDect: fwd _m_odata %lx \n",_m_odata);
+        #endif
+        return true;
+      }
+      case OP_LOAD:{
+        if(_m_st == DONE){
+          s = _m_odata;
+          #ifdef DEBUG
+          printf("    - HzdDect: fwd _m_odata %lx \n",_m_odata);
+          #endif
+          return true;
+        }else{
+          #ifdef DEBUG
+          printf("    - HzdDect: with _m_odata but not ready\n");
+          #endif
+          return false;
+        }
+      }
+      case OP_STORE:{
+        printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _m_rd);
+        return false;
+      }
+      default:{          
+        #ifdef DEBUG
+        printf("    - HzdDect: wait\n");
+        #endif
+        return false;
+      }
     }
   }
   if( rs == _mw_rd && _mw_valid){// must have been ready
-    hzd_exist = true;
     s =  _mw_data;
     #ifdef DEBUG
     printf("    - HzdDect: fwd _mw_data %lx \n",_mw_data);
@@ -267,8 +246,7 @@ bool hzdDetect(int rs,int64_t & s){
     return true;
   }
   if( rs == _w_rd){ //hzd detected
-    hzd_exist = true;
-    if(!_w_flush && (_w_st == DONE ) ){
+    if(_w_st == DONE ){
       s =  _w_data;
       #ifdef DEBUG
       printf("    - HzdDect: fwd _w_data %lx \n",_w_data);
@@ -282,162 +260,12 @@ bool hzdDetect(int rs,int64_t & s){
     }
   }
   // no hzd
-
-  if(hzd_exist){
-    #ifdef DEBUG
-    printf("    - HzdDect: wait.\n",(uint64_t)s);
-    #endif
-    return false;
-  }else{
-    s = this->regfile->greg[rs];
-    #ifdef DEBUG
-    printf("    - HzdDect: no hzd, read %lx from greg\n",(uint64_t)s);
-    #endif
-    return true;
-  }
-}
-/*
-bool hzdDetect(int rs,int64_t & s,bool fromIF = false){
+  s = this->regfile->greg[rs];
   #ifdef DEBUG
-  printf("    - HzdDect: rs = %d\n",rs);
+  printf("    - HzdDect: no hzd, read %lx from greg\n",(uint64_t)s);
   #endif
-  if(rs == ZERO){
-    #ifdef DEBUG
-    printf("    - HzdDect: fwd ZERO\n");
-    #endif
-    s = 0; return true;
-  }
-  if(fromIF){
-    if(_fd_valid && (!_d_flush)){
-      #ifdef DEBUG
-      printf("    - HzdDect: wait until 0x%x decode \n",_fd_instr);
-      #endif
-      return false;
-    }
-    if(rs == _d_rd){
-      #ifdef DEBUG
-      printf("    - HzdDect: hzd with _d_rd, stall %lx \n");
-      #endif
-      return false;
-    }
-  }
-  
-    if(rs == _de_rd && _de_valid){ //hzd detected
-      if( _de_mem_op == MREAD){
-        #ifdef DEBUG
-        printf("    - HzdDect: with memory read _m_odata but not ready\n");
-        #endif
-        return false;
-      }else if( _de_mem_op == MWRITE ){
-        printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _em_rd);
-        return false;
-      }else if( _de_mem_op == NOP){
-        if(_de_alu_op == NOP){
-          s = _de_data;
-          #ifdef DEBUG
-          printf("    - HzdDect: fwd _de_data %lx \n",_de_data);
-          #endif
-          return true;
-        }else{
-          #ifdef DEBUG
-          printf("    - HzdDect: not ready until ALU is done\n");
-          #endif
-          return false;
-        }
-      }
-    }else if( rs == _e_rd  ){ //hzd detected
-      if(_e_mem_op == MREAD){
-        #ifdef DEBUG
-        printf("    - HzdDect: with memory read _m_odata but not ready\n");
-        #endif
-        return false;
-      }else if(_e_mem_op == MWRITE){
-        printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _em_rd);
-        return false;
-      }else if( _e_mem_op == NOP ){
-        if(_e_alu_op == NOP){
-          s = _e_idata;
-          #ifdef DEBUG
-          printf("    - HzdDect: fwd _e_idata %lx \n",_e_idata);
-          #endif
-          return true;
-        }else{ //_e_alu_op != NOP
-          if( (!_e_flush && (_e_st == DONE )) ){
-            s = _e_odata;
-            #ifdef DEBUG
-            printf("    - HzdDect: fwd _e_odata %lx \n",_e_odata);
-            #endif
-            return true; // s is ready
-          }else{ // not ready
-            #ifdef DEBUG
-            printf("    - HzdDect: with _e_odata but not ready\n");
-            #endif
-            return false;
-          }
-        }
-      }
-    }else if( rs == _em_rd && _em_valid){
-      if( _em_mem_op == NOP ){ // no operation of memory. so rd must have been ready
-        s = _em_data;
-        #ifdef DEBUG
-        printf("    - HzdDect: fwd _em_data %lx \n",_m_odata);
-        #endif
-        return true;
-      }else if( _em_mem_op == MREAD){
-        #ifdef DEBUG
-        printf("    - HzdDect: with memory read _m_odata but not ready\n");
-        #endif
-        return false;
-      }else if( _em_mem_op == MWRITE){
-        printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _em_rd);
-        return false;
-      }
-    }else if( rs == _m_rd){
-      if( !_m_flush && (_m_st == DONE ) ){
-        s = _m_odata;
-        #ifdef DEBUG
-        printf("    - HzdDect: fwd _m_odata %lx \n",_m_odata);
-        #endif
-        return true;
-      }else{ // not ready
-        #ifdef DEBUG
-        printf("    - HzdDect: with _m_odata but not ready\n");
-        #endif
-        return false;
-      }
-    }else if( rs == _mw_rd && _mw_valid){// must have been ready
-      s =  _mw_data;
-      #ifdef DEBUG
-      printf("    - HzdDect: fwd _mw_data %lx \n",_mw_data);
-      #endif
-      return true;
-    }else if( rs == _w_rd){ //hzd detected
-      if(!_w_flush && (_w_st == DONE ) ){
-        s =  _w_data;
-        #ifdef DEBUG
-        printf("    - HzdDect: fwd _w_data %lx \n",_w_data);
-        #endif
-        return true;
-      }else{ // not ready
-        #ifdef DEBUG
-        printf("    - HzdDect: with _m_odata but not ready\n");
-        #endif
-        return false;
-      }
-    }else{ // no hzd
-      s = this->regfile->greg[rs];
-      #ifdef DEBUG
-      printf("    - HzdDect: no hzd, read %lx from greg\n",(uint64_t)s);
-      #endif
-      return true;
-    }
-  
+  return true;
 }
-
-
-
-
-*/
 
 public:
   // MEM
@@ -449,9 +277,8 @@ public:
     memory = new Memory;
     memory->resetMemory();
     pc = 0;
-    _d_flush = _e_flush = _m_flush = _w_flush = true;
+    _fd_bub = _de_bub = _em_bub = _mw_bub = true;
     _f_st = _d_st = _e_st = _m_st = _w_st = READY;
-    _f_jalr = false;
     #ifdef DEBUG
     for(int i = 0; i < 8;++i)
       sprintf(instr[i],"\n");
@@ -481,13 +308,13 @@ public:
     void printPL(){
       printf("-------Pipeline stage---------\n");
       printf(" - IF = %s: %s",pl_st[_f_st],instr[IF_D]);
-      printf("  - fd %d : pc:0x%lx, instr:0x%x\n",_fd_valid,_fd_pc,_fd_instr);
+      printf("  - fd v=%d b=%d : pc:0x%lx, instr:0x%x\n",_fd_valid,_fd_bub,_fd_pc,_fd_instr);
       printf(" - ID = %s: %s",pl_st[_d_st],instr[ID_D]);
-      printf("  - de %d : %s",_de_valid,instr[DE_D]);
+      printf("  - de v=%d b=%d : %s",_de_valid,_de_bub,instr[DE_D]);
       printf(" - EX = %s: %s",pl_st[_e_st],instr[EX_D]);
-      printf("  - em %d : %s",_em_valid,instr[EM_D]);
+      printf("  - em v=%d b=%d : %s",_em_valid,_em_bub,instr[EM_D]);
       printf(" - MEM = %s: %s",pl_st[_m_st],instr[MEM_D]);
-      printf("  - mw %d : %s",_mw_valid,instr[MW_D]);
+      printf("  - mw v=%d b=%d : %s",_mw_valid,_mw_bub,instr[MW_D]);
       printf(" - WB = %s: %s",pl_st[_w_st],instr[WB_D]);
     }
   const char pl_st[5][10] = {"","RDY","DNE","TCK","STL"};

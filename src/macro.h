@@ -77,6 +77,7 @@ typedef long int int64_t;
 #define OP_R_W 0x3b // rv64i only
 #define OP_IMM_W 0x1b //rv64i only
 #define OP_ECALL 0x73 // system call
+#define OP_BUBBLE 0xffff
 
 // - alu_op: ALU control
 #define ALU_ADD 0x1
@@ -180,6 +181,7 @@ typedef long int int64_t;
 #define CLK_L_OP 3
 #define CLK_WB 1
 #define CLK_MEM 2
+#define CLK_ONE 1
 
 
 #ifdef DEBUG
