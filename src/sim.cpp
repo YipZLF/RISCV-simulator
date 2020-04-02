@@ -34,6 +34,7 @@ int main(int argc, char ** argv){
   #define DEBUG_ROUND 0x20000
   for(int i = 0 ;i < DEBUG_ROUND;++i){// into loop, each loop means one tick of the clock
   //for(;;){
+    printf("CPU TICK: %d\n",i);
     int status = cpu->pl_step();
     
     cpu->printPL();

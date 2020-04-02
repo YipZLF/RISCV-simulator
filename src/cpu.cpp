@@ -872,28 +872,25 @@ int CPU::IF(){
       }
       _fd_instr = _f_instr;
       _fd_pc = _f_pc;
+      _fd_taken = _f_taken;
+      _fd_pc_recover = _f_pc_recover;
       
-      _f_instr = 0;
-      _f_pc = 0;
+      _f_pc = _f_pc_recover = _f_taken = _f_instr = 0;
       
-      _fd_valid = true;
-      _f_st = READY;
-    }else if( _fd_bub ){
-      _f_instr = 0;
-      _f_pc = 0;
-
       _fd_valid = true;
       _f_st = READY;
     }
   }
   if(_f_st == READY){
-    if(_f_bub){
+    if(_fetch_bub){
       #ifdef DEBUG
       sprintf(instr[IF_D],"Bubble\n");
       printf("\n - IF: %s",instr[IF_D]);
       #endif
       _f_instr = 0;
       _f_pc = 0;
+      _f_bub = _fetch_bub;
+      _fetch_bub = false;
     }else{
       _f_pc = this->pc;
       memcpy((void *)&_f_instr, (memory->mem + _f_pc) , INSTR_SIZE);
@@ -915,7 +912,7 @@ int CPU::IF(){
         case OP_SB:{ 
           _pc_branch = (uint64_t)pc + _f_offset; 
           //branch prediction
-          this->pc = branchPred(_pc_next,_pc_branch); 
+          this->pc = branchPred(_pc_next,_pc_branch,_f_pc_recover,_f_taken); 
           #ifdef DEBUG
           printf("   - IF: SB: pc = 0x%lx\n",pc);
           #endif 
@@ -928,16 +925,16 @@ int CPU::IF(){
                       (getBits(_f_instr,12,19) << 12) + 
                       (getBits(_f_instr,31,31) << 20);
           _f_offset = signExtend(_f_offset,21);
-          _pc_branch = (uint64_t)pc + _f_offset; 
+          _pc_branch = (uint64_t)this->pc + _f_offset; 
           this->pc = _pc_branch;
           #ifdef DEBUG
-          printf("   - IF: UJ:pc = 0x%lx\n",pc);
+          printf("   - IF: UJ:pc = 0x%lx\n",this->pc);
           #endif 
           break;
         }
         case OP_JALR:{
           this->pc = _pc_next;
-          _f_bub = true;
+          _fetch_bub = true;
           #ifdef DEBUG
           printf("   - IF: JALR:insert bubble to next IF\n",pc);
           #endif 
@@ -971,8 +968,9 @@ int CPU::IF(){
 int CPU::ID(){
   if( _d_st == DONE){
     if(!_de_stall && !_de_valid && !_de_bub){
-      if(_d_opcode == OP_BUBBLE){
+      if(_d_bub){
         _de_bub = true;
+        _d_bub = false;
       }
       _de_s1 = _d_s1;
       _de_s2 = _d_s2;
@@ -983,7 +981,12 @@ int CPU::ID(){
       _de_data = _d_data;
       _de_operand_type = _d_operand_type;
       _de_opcode = _d_opcode;
-
+      _de_taken = _d_taken;
+      _de_pc_recover = _d_pc_recover;
+      if(_d_opcode == OP_JALR){
+        _fetch_bub = true;
+        _fd_bub = true;
+      }
       _d_s1 = 0;
       _d_s2 = 0;
       _d_rd = 0;
@@ -993,6 +996,8 @@ int CPU::ID(){
       _d_data = 0;
       _d_operand_type = 0;
       _d_opcode = 0;
+      _d_pc_recover = 0;
+      _d_taken = 0;
 
       _de_valid = true;
       _d_st = READY;
@@ -1000,26 +1005,11 @@ int CPU::ID(){
       strcpy(instr[DE_D],instr[ID_D]);
       sprintf(instr[ID_D],"\n");
       #endif
-    }else if(_de_bub){
-      _d_s1 = 0;
-      _d_s2 = 0;
-      _d_rd = 0;
-      _d_alu_op = 0;
-      _d_b_op = 0;
-      _d_mem_op = 0;
-      _d_data = 0;
-      _d_operand_type = 0;
-      _d_opcode = 0;
-
-      _d_st = READY;
-      #ifdef DEBUG
-      sprintf(instr[ID_D],"\n");
-      sprintf(instr[DE_D],"\n");
-      #endif
     }
   }
   if( _d_st == READY){
     if(_fd_bub){
+      _d_bub = _fd_bub;
       _fd_bub = false;
       _fd_valid = false;
       _d_opcode = OP_BUBBLE;
@@ -1027,7 +1017,7 @@ int CPU::ID(){
       _d_st = TICKING;
       #ifdef DEBUG
       sprintf(instr[ID_D],"Bubble\n");
-      printf("\n - IF: %s",instr[ID_D]);
+      printf("\n - ID: %s",instr[ID_D]);
       #endif
 
     }else{
@@ -1036,6 +1026,8 @@ int CPU::ID(){
       
       _d_instr = _fd_instr;
       _d_pc = _fd_pc;
+      _d_taken = _fd_taken;
+      _d_pc_recover = _fd_pc_recover;
       #ifdef DEBUG
       printf("    - ID: at 0x%lx fetched 0x%x \n",_d_pc,_d_instr);
       #endif
@@ -1185,6 +1177,7 @@ int CPU::ID(){
           if( !(_d_rs1_ok && _d_rs2_ok) ) {
             _fd_stall = true;
           }else{
+            _fd_stall = false;
             _d_st = TICKING;
           }
           #ifdef DEBUG
@@ -1260,6 +1253,7 @@ int CPU::ID(){
           if( !(_d_rs1_ok && _d_rs2_ok) ) {
             _fd_stall = true;
           }else{
+            _fd_stall = false;
             _d_st = TICKING;
           }
           #ifdef DEBUG
@@ -1351,9 +1345,10 @@ int CPU::ID(){
           _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
           
           if( !(_d_rs1_ok && _d_rs2_ok) ) {
-            _d_st = STALL;
+            _fd_stall = true;
             return 0;
           }else{
+            _fd_stall = false;
             _d_st = TICKING;
           }
           #ifdef DEBUG
@@ -1424,6 +1419,7 @@ int CPU::ID(){
           if( !(_d_rs1_ok && _d_rs2_ok) ) {
             _fd_stall = true;
           }else{
+            _fd_stall = false;
             _d_st = TICKING;
           }
           #ifdef DEBUG
@@ -1491,6 +1487,7 @@ int CPU::ID(){
           if( !(_d_rs1_ok && _d_rs2_ok) ) {
             _fd_stall = true;
           }else{
+            _fd_stall = false;
             _d_st = TICKING;
           }
           #ifdef DEBUG
@@ -1541,6 +1538,7 @@ int CPU::ID(){
           if( !(_d_rs1_ok && _d_rs2_ok) ) {
             _fd_stall = true;
           }else{
+            _fd_stall = false;
             _d_st = TICKING;
           }
           #ifdef DEBUG
@@ -1555,6 +1553,7 @@ int CPU::ID(){
           _d_rs2 = getBits(_d_instr,20,24);
           _d_rd = 0;
           _d_mem_op = NOP;
+          _d_operand_type = DOUBLE;
           switch(funct3){
             case 0x0:{_d_b_op = BEQ;
               _d_alu_op = ALU_SUB;
@@ -1632,6 +1631,7 @@ int CPU::ID(){
           if( !(_d_rs1_ok && _d_rs2_ok) ) {
             _fd_stall = true;
           }else{
+            _fd_stall = false;
             _d_st = TICKING;
           }
           #ifdef DEBUG
@@ -1652,7 +1652,7 @@ int CPU::ID(){
           
           _d_st = TICKING;
           #ifdef DEBUG
-          sprintf(instr[ID_D],"auipc %u, $0x%x\n",_d_rd, _d_s2);
+          sprintf(instr[ID_D],"auipc %u, $0x%x\n",_d_rd, getBits(_d_instr,12,31));
           printf(" - ID: %s",instr[ID_D]);
           #endif
           break;
@@ -1709,16 +1709,38 @@ int CPU::ID(){
           _d_alu_op = ALU_ADD;
           _d_mem_op = NOP;
           _d_b_op = NOP;
-          if(_f_st != STALL){ printf("   -ID: Error in IF state\n"); return ERROR;}
-          
+          // JALR!
+          _fetch_bub = true;
+
           _d_rs1_ok = hzdDetect(_d_rs1,_d_s1);
           if(_d_rs1_ok == true){
+            _fd_stall = false;
             _d_st = TICKING;
           }else{
             _fd_stall = true;
           }
           #ifdef DEBUG
           sprintf(instr[ID_D],"jalr %u,%lx(%u)[off(rs1)]\n",_d_rd, _d_s2,_d_rs1);
+          printf(" - ID: %s",instr[ID_D]);
+          #endif
+          break;
+        }
+        case OP_ECALL:{
+          _d_rd = 0;
+          _d_rs1 = 0;
+          _d_s1 = 0;
+          _d_s2 = 0;
+          _d_rs2_ok = true;
+          _d_rs1_ok = true;
+          _d_data = 0;
+          _d_operand_type = DOUBLE;
+          _d_alu_op = NOP;
+          _d_mem_op = NOP;
+          _d_b_op = NOP;
+          _d_st = TICKING;
+          
+          #ifdef DEBUG
+          sprintf(instr[ID_D],"ecall\n");
           printf(" - ID: %s",instr[ID_D]);
           #endif
           break;
@@ -1752,8 +1774,9 @@ int CPU::ID(){
 int CPU::EX(){
   if(_e_st == DONE){
     if( !_em_stall && !_em_valid && !_em_bub){
-      if(_e_opcode == OP_BUBBLE){
+      if(_e_bub){
         _em_bub = true;
+        _e_bub = false;
       }
       _em_data = _e_odata;
       _em_data2 = _e_odata2;
@@ -1762,29 +1785,28 @@ int CPU::EX(){
       _em_operand_type = _e_operand_type;
       _em_opcode = _e_opcode;
       _em_valid = TRUE;
-
-      _e_odata = _e_odata2 = _e_rd = _e_mem_op = _e_operand_type = _e_opcode = 0;
-
-      _e_st = READY;
-    }else if(_em_bub){
-      _e_odata = _e_odata2 = _e_rd = _e_mem_op = _e_operand_type = _e_opcode = 0;
       
+
+      _e_odata = _e_odata2 = _e_rd = _e_mem_op = _e_operand_type = _e_opcode = _e_taken = _e_pc_recover = 0;
+
       _e_st = READY;
+      #ifdef DEBUG
+      strcpy(instr[EM_D],instr[EX_D]);
+      sprintf(instr[EX_D],"\n");
+      #endif
     }
-    #ifdef DEBUG
-    strcpy(instr[EM_D],instr[EX_D]);
-    sprintf(instr[EX_D],"\n");
-    #endif
   }
   if(_e_st == READY){
     if( _de_bub ){
       _e_opcode = OP_BUBBLE;
+      _e_bub = _de_bub;
       _de_bub = false;
       _de_valid = false;
       simClocksToFinish(_e_clk,CLK_ONE);
       _e_st = TICKING;
       #ifdef DEBUG
-      strcpy(instr[EX_D],instr[DE_D]);
+      sprintf(instr[EX_D],"Bubble\n");
+      sprintf(instr[DE_D],"\n");
       #endif
     }else{
       if(_de_valid){
@@ -1797,9 +1819,12 @@ int CPU::EX(){
         _e_rd = _de_rd;
         _e_operand_type = _de_operand_type;
         _e_opcode = _de_opcode;
+        _e_b_check = false;
+        _e_pc_recover = _de_pc_recover;
+        _e_taken = _de_taken;
 
         _de_valid = FALSE;
-        _de_s1 = _de_s2 = _de_b_op = _de_alu_op = _de_data = _de_mem_op = _de_rd = _de_operand_type = _de_opcode = 0;
+        _de_s1 = _de_s2 = _de_b_op = _de_alu_op = _de_data = _de_mem_op = _de_rd = _de_operand_type = _de_opcode = _de_pc_recover = _de_taken = 0;
 
         #ifdef DEBUG
         strcpy(instr[EX_D],instr[DE_D]);
@@ -1845,22 +1870,30 @@ int CPU::EX(){
     simTick(_e_clk);
     if(simTickDone(_e_clk)) {
       _e_st = DONE;
-      if(_e_b_op != NOP && hasPredicted(_e_b_op) ){// deal with branch prediction
-      #ifdef DEBUG
-        printf("    - EX:tobranch?: %d %d %ld==0x%lx\n",toBranch(_e_b_op,_e_odata),_e_b_op,_e_odata,(uint64_t)_e_odata);
-      #endif
-      bool _e_toBranch = toBranch(_e_b_op,_e_odata);
-      if(_e_toBranch != is_b_taken_pred.front()){ // wrong prediction
+      if(_e_opcode == OP_JALR){
+        _f_bub = _fd_bub = _e_bub =  _de_bub = true;
+        this->pc = _e_odata;
         #ifdef DEBUG
-        printf(" - EX: branch prediction wrong. recovering to PC=0x%lx\n",pc_recover.front());
+        printf(" - EX: JALR: fwd %x to pc.\n",_e_odata);
         #endif
-        wrongPred();
-      }else{
+      }
+      if(_e_b_op != NOP && !_e_b_check && hasPredicted(_e_b_op) ){// deal with branch prediction
+        _e_b_check = true;
         #ifdef DEBUG
-        printf(" - EX: branch prediction correct.\n");
+          printf("    - EX:tobranch?: %d %d %ld==0x%lx\n",toBranch(_e_b_op,_e_odata),_e_b_op,_e_odata,(uint64_t)_e_odata);
         #endif
-        correctPred();
-        }
+        bool _e_toBranch = toBranch(_e_b_op,_e_odata);
+        if(_e_toBranch != _e_taken){ // wrong prediction
+          #ifdef DEBUG
+          printf(" - EX: branch prediction wrong. recovering to PC=0x%lx\n",pc_recover.front());
+          #endif
+          wrongPred(_e_pc_recover);
+        }else{
+          #ifdef DEBUG
+          printf(" - EX: branch prediction correct.\n");
+          #endif
+          correctPred();
+          }
       }
     }
   }
@@ -1870,8 +1903,9 @@ int CPU::EX(){
 int CPU::MEM(){
   if(_m_st == DONE){
     if( !_mw_stall && !_mw_valid && !_mw_bub){
-      if(_m_opcode == OP_BUBBLE){
+      if(_m_bub){
         _mw_bub = true;
+        _m_bub = false;
       }
       _mw_data = _m_odata;
       _mw_rd = _m_rd;
@@ -1880,24 +1914,23 @@ int CPU::MEM(){
       _m_st = READY;
 
       _m_odata = _m_rd = _m_opcode = 0;
-
-    }else if(_mw_bub){
-      _m_odata = _m_rd = _m_opcode = 0;
-    }
     #ifdef DEBUG
     strcpy(instr[MW_D],instr[MEM_D]);
     sprintf(instr[MEM_D],"\n");
     #endif
+    }
   }
   if(_m_st == READY){
     if(_em_bub){
       _m_opcode = OP_BUBBLE;
+      _m_bub = _em_bub;
       _em_bub = false;
       _em_valid = false;
       simClocksToFinish(_m_clk,CLK_ONE);
       _m_st = TICKING;
       #ifdef DEBUG
-      strcpy(instr[MEM_D],instr[EM_D]);
+      sprintf(instr[MEM_D],"Bubble\n");
+      sprintf(instr[EM_D],"\n");
       #endif
     }else{
       if(_em_valid){
@@ -1913,6 +1946,7 @@ int CPU::MEM(){
 
         #ifdef DEBUG
         strcpy(instr[MEM_D],instr[EM_D]);
+        sprintf(instr[EM_D],"\n");
         #endif
         
         #ifdef DEBUG
@@ -1966,7 +2000,7 @@ int CPU::MEM(){
             switch(_m_operand_type){
               case WORD: _m_addr = signExtend(_m_addr & 0xffffffff, 32); break;
               case DOUBLE:break;
-              default: printf(" mem_nop type error!\n"); return ERROR;
+              default: printf(" mem_op type error!\n"); return ERROR;
             }
             _m_odata = _m_addr;
             break;
@@ -2012,19 +2046,24 @@ int CPU::WB(){
   if(_w_st == READY){
     if(_mw_bub){
       _w_opcode = OP_BUBBLE;
+      _w_bub = _mw_bub ;
       _mw_bub = false;
       _mw_valid = false;
       #ifdef DEBUG
-      strcpy(instr[WB_D],instr[MW_D]);
+      sprintf(instr[WB_D],"Bubble\n");
+      sprintf(instr[MW_D],"\n");
       #endif
     }else{
       if(_mw_valid){
         #ifdef DEBUG
         strcpy(instr[WB_D],instr[MW_D]);
+        sprintf(instr[MW_D],"\n");
         #endif
         _w_rd = _mw_rd;
         _w_data = _mw_data;
-        _mw_rd = _mw_data = 0;
+        _w_opcode = _mw_opcode;
+        _mw_opcode = _mw_rd = _mw_data = 0;
+        
         _mw_valid = FALSE; // Next round data is not ready.
       }//else if _mw_valid == false, do nothing.
     }
@@ -2033,7 +2072,13 @@ int CPU::WB(){
   }
   if(_w_st == TICKING){
     simTick(_w_clk);
-    if(simTickDone(_w_clk)) {_w_st = DONE;}
+    if(simTickDone(_w_clk)) {
+      _w_st = DONE;
+      if(_w_opcode == OP_ECALL){
+        _fd_stall = false;
+        if( this->regfile->greg[A7]==1) return HALT;
+      }
+    }
   }
   return 0;
 }

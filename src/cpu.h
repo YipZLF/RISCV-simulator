@@ -27,62 +27,63 @@ class CPU{
   int EX();
   int MEM();
   int WB();
-  uint64_t branchPred(uint64_t pc_next,uint64_t pc_branch){
+  uint64_t branchPred(uint64_t pc_next,uint64_t pc_branch,uint64_t &pc_recover,bool &taken){
     /*always taken*/
     #ifdef DEBUG
     printf("    - IF: branch prediction: taken.\n");
     #endif
-    is_b_taken_pred.push_back(true);
-    pc_recover.push_back(pc_next);
+    taken = true;
+    pc_recover = pc_next;
     return pc_branch; 
   }
   std::deque<uint64_t> pc_recover;
   std::deque<bool> is_b_taken_pred;
-  void wrongPred(){
-    _f_bub = _fd_bub = _de_bub = true;
-    pc = pc_recover.front(); 
-    pc_recover.clear();
-    is_b_taken_pred.clear();
+  void wrongPred(uint64_t pc_recover){
+    _f_bub = _fd_bub = _e_bub =  _de_bub = true;
+    pc = pc_recover;
   }
   void correctPred(){
-    pc_recover.pop_front();
-    is_b_taken_pred.pop_front();
+    // do nothing;
   }
   bool hasPredicted(int b_op){
     return (b_op & 0x1);// b_op that needed prediction is encoded with odd number.
   }
 /* Internal CPU states register*/
 
-bool _f_b_pred_error,_f_jalr,_f_stall,_f_bub;
+bool _fetch_bub;
+
+bool _f_b_pred_error,_f_jalr,_f_stall,_f_bub,_f_taken;
 int _f_st, _f_clk,_f_rs1;
-uint64_t _f_pc;
+uint64_t _f_pc,_f_pc_recover;
 int64_t _f_offset,_f_s1;
 uint32_t _f_instr;
 
-bool _fd_valid, _fd_stall,_fd_bub;
-uint64_t _fd_pc;
+bool _fd_valid, _fd_stall,_fd_bub,_fd_taken;
+uint64_t _fd_pc,_fd_pc_recover;
 uint32_t _fd_instr;
 
-bool _d_flush,_d_rs1_ok,_d_rs2_ok,_d_bub;
+bool _d_flush,_d_rs1_ok,_d_rs2_ok,_d_bub,_d_taken;
 int _d_st, _d_clk,_d_rd,_d_alu_op,_d_b_op,_d_mem_op,_d_operand_type,_d_rs1,_d_rs2,_d_opcode;
 int64_t _d_s1,_d_s2,_d_data;
-uint64_t _d_pc;
+uint64_t _d_pc,_d_pc_recover;
 uint32_t _d_instr;
 
-bool _de_valid,_de_stall,_de_bub;
+bool _de_valid,_de_stall,_de_bub,_de_taken;
 int64_t _de_data,_de_s1,_de_s2;
+uint64_t _de_pc_recover;
 int _de_rd,_de_b_op,_de_alu_op,_de_mem_op,_de_operand_type,_de_opcode;
 
-bool _e_flush;
+bool _e_flush,_e_b_check,_e_bub,_e_taken;
 int _e_st, _e_clk;
 int64_t _e_odata,_e_odata2,_e_idata,_e_s1,_e_s2;
+uint64_t _e_pc_recover;
 int _e_rd,_e_b_op,_e_alu_op,_e_mem_op,_e_operand_type,_e_opcode;
 
 bool _em_valid,_em_stall,_em_bub;
 int64_t _em_data,_em_data2;
 int _em_rd,_em_mem_op,_em_operand_type,_em_opcode;
 
-bool _m_flush;
+bool _m_flush,_m_bub;
 int _m_st, _m_clk;
 int64_t _m_idata,_m_odata;
 uint64_t _m_addr;
@@ -92,7 +93,7 @@ bool _mw_valid,_mw_stall,_mw_bub;
 int64_t _mw_data;
 int _mw_rd,_mw_opcode;
 
-bool _w_flush;
+bool _w_flush,_w_bub;
 int _w_st, _w_clk;
 int64_t _w_data;
 int _w_rd,_w_opcode;
@@ -174,7 +175,7 @@ bool hzdDetect(int rs,int64_t & s){
       case OP_IMM_W:{
         s = _em_data;
         #ifdef DEBUG
-        printf("    - HzdDect: fwd _em_data %lx \n",_m_odata);
+        printf("    - HzdDect: fwd _em_data %lx \n",_em_data);
         #endif
         return true;
       }
@@ -277,6 +278,7 @@ public:
     memory = new Memory;
     memory->resetMemory();
     pc = 0;
+    _fetch_bub = false;
     _fd_bub = _de_bub = _em_bub = _mw_bub = true;
     _f_st = _d_st = _e_st = _m_st = _w_st = READY;
     #ifdef DEBUG
@@ -308,13 +310,13 @@ public:
     void printPL(){
       printf("-------Pipeline stage---------\n");
       printf(" - IF = %s: %s",pl_st[_f_st],instr[IF_D]);
-      printf("  - fd v=%d b=%d : pc:0x%lx, instr:0x%x\n",_fd_valid,_fd_bub,_fd_pc,_fd_instr);
+      printf("  - fd v=%d b=%d st=%d: pc:0x%lx, instr:0x%x\n",_fd_valid,_fd_bub,_fd_stall, _fd_pc,_fd_instr);
       printf(" - ID = %s: %s",pl_st[_d_st],instr[ID_D]);
-      printf("  - de v=%d b=%d : %s",_de_valid,_de_bub,instr[DE_D]);
+      printf("  - de v=%d b=%d st=%d: %s",_de_valid,_de_bub,_de_stall,instr[DE_D]);
       printf(" - EX = %s: %s",pl_st[_e_st],instr[EX_D]);
-      printf("  - em v=%d b=%d : %s",_em_valid,_em_bub,instr[EM_D]);
+      printf("  - em v=%d b=%d st=%d: %s",_em_valid,_em_bub,_em_stall,instr[EM_D]);
       printf(" - MEM = %s: %s",pl_st[_m_st],instr[MEM_D]);
-      printf("  - mw v=%d b=%d : %s",_mw_valid,_mw_bub,instr[MW_D]);
+      printf("  - mw v=%d b=%d st=%d: %s",_mw_valid,_mw_bub,_mw_stall,instr[MW_D]);
       printf(" - WB = %s: %s",pl_st[_w_st],instr[WB_D]);
     }
   const char pl_st[5][10] = {"","RDY","DNE","TCK","STL"};
