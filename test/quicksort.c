@@ -1,5 +1,5 @@
-#include "lib.h"
-#define SIZE 20
+#include"lib.h"
+#define SIZE 10
 int arr[SIZE];
 void QuickSort(int *arr, int s, int e){
     if(s<e){
@@ -16,17 +16,24 @@ void QuickSort(int *arr, int s, int e){
         QuickSort(arr,l+1,e);
     }
 }
-/*
+
 void Init(){
-    srand(1);
     for(int i = 0 ; i < SIZE ; ++i){
-        arr[i] = rand() % SIZE;
+        arr[i] = SIZE-i;
     }
 }
-*/
+
+void Print(){
+    for(int i = 0 ; i < SIZE ; ++i){
+        Print_d(arr[i]);
+    }
+    Print_s("\n");
+}
 
 int main(){
-    //Init();
+    Init();
+    Print();
     QuickSort(arr,0,SIZE-1);
+    Print();
     Exit();
 }

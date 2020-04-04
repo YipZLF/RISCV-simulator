@@ -9,11 +9,12 @@ void printStats(){
   printf("-----------------Statistics of Simulation--------------------\n");
   printf("Number of ..\n");
   printf(" - clocks:\t%lu\n",clk_cnt);
-  printf(" - instrs:\t%lu\n",instr_cnt);
+  printf(" - instrs:\t%lu (CPI: %.3lf)\n",instr_cnt,((double)clk_cnt)/instr_cnt);
   printf(" - mem read:\t%lu\n",mem_read);
   printf(" - mem write:\t%lu\n",mem_write);
   printf(" - branch instrs:\t%lu\n",b_total);// B*, excluding jal instrs
   printf(" - correct branch prediction:\t%lu(acc: %.3lf)\n",
         b_pred_crt, ( (double)b_pred_crt/b_total ) );
   printf("--------------------------------------------------------------\n");
+  
 }

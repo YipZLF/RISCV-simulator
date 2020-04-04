@@ -10,8 +10,8 @@ int Ackermann(int m,int n){
 }
 
 int main(){
-    int m,n,ans;
-
-    ans = Ackermann(1,3);
+    int m=2,n=2,ans;
+    ans = Ackermann(m,n);
+    Print_d(ans);
     Exit();
 }

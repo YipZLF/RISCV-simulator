@@ -178,12 +178,13 @@ typedef long int int64_t;
 #define CLK_ID 1
 #define CLK_S_OP 1
 #define CLK_M_OP 2
-#define CLK_L_OP 3
+#define CLK_L_OP 4
 #define CLK_WB 1
 #define CLK_MEM 2
 #define CLK_ONE 1
 
-
+//statistic
+#define statsInc(x) (x += 1)
 
 #define IF_D 0
 #define ID_D 1

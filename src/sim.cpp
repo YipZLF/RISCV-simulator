@@ -63,7 +63,7 @@ int main(int argc, char ** argv){
   
 
   // set up cpu
-  CPU * cpu = new CPU();
+  CPU * cpu = new CPU(verbose);
 
   if(loadELF(cpu,elf_file) == ERROR){
     printf("Load ELF file error!\n");
@@ -76,16 +76,18 @@ int main(int argc, char ** argv){
     else
       status = cpu->step();
     
-    if(verbose){
-     // if(use_pl)
-     //   cpu->printPL();
-     // cpu->printReg();
+    if(verbose){//print regs and pipeline states
+      if(use_pl)
+        cpu->printPL();
+      cpu->printReg();
     }
     if(status==ERROR){
       printf("CPU error!\n");
       break;
     }else if(status==HALT){
-      printf("CPU halts. Simulation finished!\n");
+      printf("\n-----------------------------------");
+      printf("\n| CPU halts. Simulation finished! |");
+      printf("\n-----------------------------------\n");
       break;
     }
     if(single_step){
@@ -123,5 +125,6 @@ int main(int argc, char ** argv){
       }
     }
   }
+  printStats();
   return 0;
 }

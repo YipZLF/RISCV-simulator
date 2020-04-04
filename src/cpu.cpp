@@ -37,6 +37,174 @@ bool toBranch(uint_t b_op, uint64_t alu_d){
   } 
 }
 
+bool CPU::hzdDetect(int rs,int64_t & s){
+  #ifdef DEBUG
+  printf("    - HzdDect: rs = %d\n",rs);
+  #endif
+  if(rs == ZERO){
+    #ifdef DEBUG
+    printf("    - HzdDect: fwd ZERO\n");
+    #endif
+    s = 0; return true;
+  }
+  if(rs == _de_rd && _de_valid){ 
+    switch(_de_opcode){
+      case OP_JALR:
+      case OP_UJ:
+      case OP_AUIPC:
+      case OP_LUI: {
+        s = _de_data; 
+        #ifdef DEBUG
+        printf("    - HzdDect: fwd _de_data %lx \n",_de_data);
+        #endif
+        return true;
+        break;}
+      default: return false;
+    }
+  }
+  if( rs == _e_rd ){
+    switch(_e_opcode){
+      case OP_JALR:
+      case OP_UJ:
+      case OP_AUIPC:
+      case OP_LUI:{
+        s = _e_idata;
+        #ifdef DEBUG
+        printf("    - HzdDect: fwd _e_idata %lx \n",_e_idata);
+        #endif
+        return true;
+      }
+      case OP_R:
+      case OP_R_W:
+      case OP_IMM:
+      case OP_IMM_W:{
+        if(_e_st == DONE){
+          s = _e_odata;
+          #ifdef DEBUG
+          printf("    - HzdDect: fwd _e_odata %lx \n",_e_odata);
+          #endif
+          return true; // s is ready
+        }else{
+          #ifdef DEBUG
+          printf("    - HzdDect: with _e_odata but not ready\n");
+          #endif
+          return false;
+        }
+      }
+      default:{          
+        #ifdef DEBUG
+        printf("    - HzdDect: wait till mem\n");
+        #endif
+        return false;
+      }
+    }
+  }
+  if( rs == _em_rd && _em_valid){
+    switch(_em_opcode){
+      case OP_JALR:
+      case OP_UJ:
+      case OP_AUIPC:
+      case OP_LUI:
+      case OP_R:
+      case OP_R_W:
+      case OP_IMM:
+      case OP_IMM_W:{
+        s = _em_data;
+        #ifdef DEBUG
+        printf("    - HzdDect: fwd _em_data %lx \n",_em_data);
+        #endif
+        return true;
+      }
+      case OP_LOAD:{
+        #ifdef DEBUG
+        printf("    - HzdDect: with memory read _m_odata but not ready\n");
+        #endif
+        return false;
+      }
+      case OP_STORE:{
+        printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _em_rd);
+        return false;
+      }
+      default:{          
+        #ifdef DEBUG
+        printf("    - HzdDect: wait\n");
+        #endif
+        return false;
+      }
+    }
+  }
+  if( rs == _m_rd ){
+    switch(_m_opcode){
+      case OP_JALR:
+      case OP_UJ:
+      case OP_AUIPC:
+      case OP_LUI:
+      case OP_R:
+      case OP_R_W:
+      case OP_IMM:
+      case OP_IMM_W:{
+        s = _m_odata;
+        #ifdef DEBUG
+        printf("    - HzdDect: fwd _m_odata %lx \n",_m_odata);
+        #endif
+        return true;
+      }
+      case OP_LOAD:{
+        if(_m_st == DONE){
+          s = _m_odata;
+          #ifdef DEBUG
+          printf("    - HzdDect: fwd _m_odata %lx \n",_m_odata);
+          #endif
+          return true;
+        }else{
+          #ifdef DEBUG
+          printf("    - HzdDect: with _m_odata but not ready\n");
+          #endif
+          return false;
+        }
+      }
+      case OP_STORE:{
+        printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _m_rd);
+        return false;
+      }
+      default:{          
+        #ifdef DEBUG
+        printf("    - HzdDect: wait\n");
+        #endif
+        return false;
+      }
+    }
+  }
+  if( rs == _mw_rd && _mw_valid){// must have been ready
+    s =  _mw_data;
+    #ifdef DEBUG
+    printf("    - HzdDect: fwd _mw_data %lx \n",_mw_data);
+    #endif
+    return true;
+  }
+  if( rs == _w_rd){ //hzd detected
+    if(_w_st == DONE ){
+      s =  _w_data;
+      #ifdef DEBUG
+      printf("    - HzdDect: fwd _w_data %lx \n",_w_data);
+      #endif
+      return true;
+    }else{ // not ready
+      #ifdef DEBUG
+      printf("    - HzdDect: with _m_odata but not ready\n");
+      #endif
+      return false;
+    }
+  }
+  // no hzd
+  s = this->regfile->greg[rs];
+  #ifdef DEBUG
+  printf("    - HzdDect: no hzd, read %lx from greg\n",(uint64_t)s);
+  #endif
+  return true;
+}
+
+
 
 
 int CPU::step(){
@@ -859,7 +1027,7 @@ int CPU::pl_step(){
   if(ret != 0) return ret;
   ret = IF();
   if(ret != 0) return ret;
-  clk_cnt ++;
+  statsInc(clk_cnt);
   return ret = 0;
 }
 
@@ -883,19 +1051,21 @@ int CPU::IF(){
   }
   if(_f_st == READY){
     if(_fetch_bub){
-      #ifdef DEBUG
       sprintf(instr[IF_D],"Bubble\n");
+      #ifdef DEBUG
       printf("\n - IF: %s",instr[IF_D]);
       #endif
       _f_instr = 0;
       _f_pc = 0;
       _f_bub = _fetch_bub;
-      _fetch_bub = false;
+      if(_pc_from_ecall==0)
+        _fetch_bub = false;
     }else{
       _f_pc = this->pc;
       memcpy((void *)&_f_instr, (memory->mem + _f_pc) , INSTR_SIZE);
-      #ifdef DEBUG
+      statsInc(instr_cnt);
       sprintf(instr[IF_D],"PC:%lx,  Instr:0x%x\n",this->pc,_f_instr);
+      #ifdef DEBUG
       printf("\n - IF: %s",instr[IF_D]);
       #endif
       if(_f_instr==0) {
@@ -916,7 +1086,6 @@ int CPU::IF(){
           #ifdef DEBUG
           printf("   - IF: SB: pc = 0x%lx\n",pc);
           #endif 
-          b_total ++; // stats
           break;
         }
         case OP_UJ:{ 
@@ -938,6 +1107,7 @@ int CPU::IF(){
           #ifdef DEBUG
           printf("   - IF: JALR:insert bubble to next IF\n",pc);
           #endif 
+
           break;
         } 
         case OP_AUIPC:{
@@ -1001,10 +1171,9 @@ int CPU::ID(){
 
       _de_valid = true;
       _d_st = READY;
-      #ifdef DEBUG
-      strcpy(instr[DE_D],instr[ID_D]);
+      if(verbose)
+        strcpy(instr[DE_D],instr[ID_D]);
       sprintf(instr[ID_D],"\n");
-      #endif
     }
   }
   if( _d_st == READY){
@@ -1015,8 +1184,8 @@ int CPU::ID(){
       _d_opcode = OP_BUBBLE;
       simClocksToFinish(_d_clk,CLK_ONE);
       _d_st = TICKING;
-      #ifdef DEBUG
       sprintf(instr[ID_D],"Bubble\n");
+      #ifdef DEBUG
       printf("\n - ID: %s",instr[ID_D]);
       #endif
 
@@ -1050,19 +1219,19 @@ int CPU::ID(){
             case 0x0:{
               switch(funct7){
                 case 0x00: {_d_alu_op = ALU_ADD;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"add %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;}
                 case 0x01: {_d_alu_op = ALU_MUL;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"mul %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;}
                 case 0x20: {_d_alu_op = ALU_SUB;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"sub %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;}
                 default:
                   printf("Instruction %x not supported!\n",_d_instr);
@@ -1073,14 +1242,14 @@ int CPU::ID(){
             case 0x1:{
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_SLL;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"sll %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 case 0x01: _d_alu_op = ALU_MULH;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"mulh %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1091,9 +1260,9 @@ int CPU::ID(){
             case 0x2:{
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_SLT;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"slt %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1104,14 +1273,14 @@ int CPU::ID(){
             case 0x4:{
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_XOR;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"xor %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 case 0x01: _d_alu_op = ALU_DIV;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"div %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1122,14 +1291,14 @@ int CPU::ID(){
             case 0x5:{
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_SRL;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"srl %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 case 0x20: _d_alu_op = ALU_SRA;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"sra %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1140,14 +1309,14 @@ int CPU::ID(){
             case 0x6:{
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_OR;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"or %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 case 0x01: _d_alu_op = ALU_REM;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"rem %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1158,9 +1327,9 @@ int CPU::ID(){
             case 0x7:{
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_AND;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"and %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1198,14 +1367,14 @@ int CPU::ID(){
             case 0x0:{
               switch(funct7){
                 case 0x00: {_d_alu_op = ALU_ADD;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"addw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;}
                 case 0x20: {_d_alu_op = ALU_SUB;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"subw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;}
                 default:
                   printf("Instruction %x not supported!\n",_d_instr);
@@ -1216,9 +1385,9 @@ int CPU::ID(){
             case 0x1:{
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_SLL;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"sllw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1229,14 +1398,14 @@ int CPU::ID(){
             case 0x5:{
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_SRL;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"srlw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 case 0x20: _d_alu_op = ALU_SRA;
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"sraw %u, %u, %u\n",_d_rd,_d_rs1,_d_rs2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1272,9 +1441,9 @@ int CPU::ID(){
           _d_operand_type = DOUBLE;
           switch(funct3){
             case 0x0:{ _d_alu_op = ALU_ADD;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"addi %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
-              #endif
+              
               break;
             } 
             case 0x1:{
@@ -1282,9 +1451,9 @@ int CPU::ID(){
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_SLL;
                   _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"slli %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1293,15 +1462,15 @@ int CPU::ID(){
               break;
             }
             case 0x2:{ _d_alu_op = ALU_SLT;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"slti %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
-              #endif
+              
               break;
             } 
             case 0x4:{ _d_alu_op = ALU_XOR;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"xori %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
-              #endif
+              
               break;
             } 
             case 0x5:{
@@ -1309,15 +1478,15 @@ int CPU::ID(){
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_SRL;
                   _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"srli %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
-                  #endif
+                  
                   break;
                 case 0x10: _d_alu_op = ALU_SRA;
                   _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"srai %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1326,15 +1495,15 @@ int CPU::ID(){
               break;
             }
             case 0x6:{ _d_alu_op = ALU_OR;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"ori %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
-              #endif
+              
               break;
             }
             case 0x7:{ _d_alu_op = ALU_AND;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"andi %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
-              #endif
+              
               break;
             }  
             default:{
@@ -1368,9 +1537,9 @@ int CPU::ID(){
           _d_operand_type = WORD;
           switch(funct3){
             case 0x0:{ _d_alu_op = ALU_ADD;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"addiw %u, %u, $%ld\n",_d_rd,_d_rs1,_d_s2);
-              #endif
+              
               break;
             } 
             case 0x1:{
@@ -1378,9 +1547,9 @@ int CPU::ID(){
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_SLL;
                   _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"slliw %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1393,15 +1562,15 @@ int CPU::ID(){
               switch(funct7){
                 case 0x00: _d_alu_op = ALU_SRL;
                   _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"srliw %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
-                  #endif
+                  
                   break;
                 case 0x10: _d_alu_op = ALU_SRA;
                   _d_s2 = signExtend(0x3f & _d_s2,6); // only imm[5:0]
-                  #ifdef DEBUG
+                  
                   sprintf(instr[ID_D],"sraiw %u, %u,$%ld\n",_d_rd,_d_rs1,_d_s2);
-                  #endif
+                  
                   break;
                 default:
                   printf("Instruction not supported!\n");
@@ -1439,45 +1608,45 @@ int CPU::ID(){
           _d_b_op = NOP;
           switch(funct3){
             case 0x6:{_d_operand_type = WORDU;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"lwu %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             case 0x5:{_d_operand_type = HALFU;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"lhu %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             case 0x4:{_d_operand_type = BYTEU;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"lbu %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             case 0x3:{_d_operand_type = DOUBLE;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"ld %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             case 0x2:{_d_operand_type = WORD;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"lw %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             case 0x1:{_d_operand_type = HALF;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"lh %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             case 0x0:{_d_operand_type = LBYTE;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"lb %u, $0x%lx(%u)\n",_d_rd,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             default: printf("Not implemented instruction\n");return ERROR;
@@ -1508,27 +1677,27 @@ int CPU::ID(){
           _d_rd = 0;// 0 for NONE
           switch(funct3){
             case 0x3:{_d_operand_type = DOUBLE;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"sd %u, $0x%lx(%u)\n",_d_rs2,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             case 0x2:{_d_operand_type = WORD;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"sw %u, $0x%lx(%u)\n",_d_rs2,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             case 0x1:{_d_operand_type = HALF;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"sh %u, $0x%lx(%u)\n",_d_rs2,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             case 0x0:{_d_operand_type = BYTE;
-              #ifdef DEBUG
+              
               sprintf(instr[ID_D],"sb %u, $0x%lx(%u)\n",_d_rs2,_d_s2,_d_rs1);
-              #endif
+              
               break;
             }
             default: printf("Instruction not implemented.\n"); return ERROR;
@@ -1557,68 +1726,68 @@ int CPU::ID(){
           switch(funct3){
             case 0x0:{_d_b_op = BEQ;
               _d_alu_op = ALU_SUB;
-              #ifdef DEBUG
+              
               int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
                                         (getBits(_d_instr,25,30) << 5) + 
                                         (getBits(_d_instr,7,7) << 11) + 
                                         (getBits(_d_instr,31,31) << 12),13);
               sprintf(instr[ID_D],"beq %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
-              #endif
+              
               break;
             }
             case 0x1:{_d_b_op = BNE;
               _d_alu_op = ALU_SUB;
-              #ifdef DEBUG
+              
               int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
                                         (getBits(_d_instr,25,30) << 5) + 
                                         (getBits(_d_instr,7,7) << 11) + 
                                         (getBits(_d_instr,31,31) << 12),13);
               sprintf(instr[ID_D],"bne %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
-              #endif
+              
               break;
             }
             case 0x4:{_d_b_op = BLT;
               _d_alu_op = ALU_SUB;
-              #ifdef DEBUG
+              
               int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
                                         (getBits(_d_instr,25,30) << 5) + 
                                         (getBits(_d_instr,7,7) << 11) + 
                                         (getBits(_d_instr,31,31) << 12),13);
               sprintf(instr[ID_D],"blt %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
-              #endif
+              
               break;
             }
             case 0x5:{_d_b_op = BGE;
               _d_alu_op = ALU_SUB;
-              #ifdef DEBUG
+              
               int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
                                         (getBits(_d_instr,25,30) << 5) + 
                                         (getBits(_d_instr,7,7) << 11) + 
                                         (getBits(_d_instr,31,31) << 12),13);
               sprintf(instr[ID_D],"bge %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
-              #endif
+              
               break;
             }
             case 0x6:{_d_b_op = BLTU;
               _d_alu_op = ALU_SUB_U;
-              #ifdef DEBUG
+              
               int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
                                         (getBits(_d_instr,25,30) << 5) + 
                                         (getBits(_d_instr,7,7) << 11) + 
                                         (getBits(_d_instr,31,31) << 12),13);
               sprintf(instr[ID_D],"bltu %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
-              #endif
+              
               break;
             }
             case 0x7:{_d_b_op = BGEU;
               _d_alu_op = ALU_SUB_U;
-              #ifdef DEBUG
+              
               int64_t imm = _d_pc + signExtend((getBits(_d_instr,8,11) << 1) + 
                                         (getBits(_d_instr,25,30) << 5) + 
                                         (getBits(_d_instr,7,7) << 11) + 
                                         (getBits(_d_instr,31,31) << 12),13);
               sprintf(instr[ID_D],"bgeu %u, %u, %lx\n",_d_rs1,_d_rs2,imm);
-              #endif
+              
               break;
             }
             default: 
@@ -1651,8 +1820,10 @@ int CPU::ID(){
           _d_b_op = NOP;
           
           _d_st = TICKING;
-          #ifdef DEBUG
+          
           sprintf(instr[ID_D],"auipc %u, $0x%x\n",_d_rd, getBits(_d_instr,12,31));
+          
+          #ifdef DEBUG
           printf(" - ID: %s",instr[ID_D]);
           #endif
           break;
@@ -1669,13 +1840,14 @@ int CPU::ID(){
           _d_b_op = NOP;
 
           _d_st = TICKING;
-          #ifdef DEBUG
+
           int64_t imm = (getBits(_d_instr,21,30) << 1) + 
             (getBits(_d_instr,20,20) << 11) + 
             (getBits(_d_instr,12,19) << 12) + 
             (getBits(_d_instr,31,31) << 20);
           imm = signExtend(imm,21) + _d_pc;
           sprintf(instr[ID_D],"jal %u, %lx \n",_d_rd, imm);
+          #ifdef DEBUG
           printf(" - ID: %s",instr[ID_D]);
           #endif
           break;
@@ -1692,8 +1864,9 @@ int CPU::ID(){
           _d_b_op = NOP;
           
           _d_st = TICKING;
-          #ifdef DEBUG
+          
           sprintf(instr[ID_D],"lui %u, $%ld\n",_d_rd, _d_data);
+          #ifdef DEBUG
           printf(" - ID: %s",instr[ID_D]);
           #endif
           break;
@@ -1719,9 +1892,10 @@ int CPU::ID(){
           }else{
             _fd_stall = true;
           }
-          #ifdef DEBUG
           sprintf(instr[ID_D],"jalr %u,%lx(%u)[off(rs1)]\n",_d_rd, _d_s2,_d_rs1);
+          #ifdef DEBUG
           printf(" - ID: %s",instr[ID_D]);
+
           #endif
           break;
         }
@@ -1739,8 +1913,12 @@ int CPU::ID(){
           _d_b_op = NOP;
           _d_st = TICKING;
           
-          #ifdef DEBUG
+          //to return from ecall
+          _pc_from_ecall = _d_pc + 4;
+          _fetch_bub = _f_bub = _fd_bub = true;
+
           sprintf(instr[ID_D],"ecall\n");
+          #ifdef DEBUG
           printf(" - ID: %s",instr[ID_D]);
           #endif
           break;
@@ -1790,10 +1968,11 @@ int CPU::EX(){
       _e_odata = _e_odata2 = _e_rd = _e_mem_op = _e_operand_type = _e_opcode = _e_taken = _e_pc_recover = 0;
 
       _e_st = READY;
-      #ifdef DEBUG
-      strcpy(instr[EM_D],instr[EX_D]);
+      if(verbose)
+        strcpy(instr[EM_D],instr[EX_D]);
+      
       sprintf(instr[EX_D],"\n");
-      #endif
+      
     }
   }
   if(_e_st == READY){
@@ -1804,10 +1983,10 @@ int CPU::EX(){
       _de_valid = false;
       simClocksToFinish(_e_clk,CLK_ONE);
       _e_st = TICKING;
-      #ifdef DEBUG
+      
       sprintf(instr[EX_D],"Bubble\n");
       sprintf(instr[DE_D],"\n");
-      #endif
+      
     }else{
       if(_de_valid){
         _e_s1 = _de_s1;
@@ -1826,10 +2005,11 @@ int CPU::EX(){
         _de_valid = FALSE;
         _de_s1 = _de_s2 = _de_b_op = _de_alu_op = _de_data = _de_mem_op = _de_rd = _de_operand_type = _de_opcode = _de_pc_recover = _de_taken = 0;
 
-        #ifdef DEBUG
+        if(verbose)
         strcpy(instr[EX_D],instr[DE_D]);
+        
         sprintf(instr[DE_D],"\n");
-        #endif
+        
 
         switch(_e_alu_op){
           case ALU_ADD: _e_odata = (int64_t)_e_s1 + (int64_t)_e_s2;simClocksToFinish(_e_clk,CLK_S_OP); break;
@@ -1878,6 +2058,7 @@ int CPU::EX(){
         #endif
       }
       if(_e_b_op != NOP && !_e_b_check && hasPredicted(_e_b_op) ){// deal with branch prediction
+        statsInc(b_total);
         _e_b_check = true;
         #ifdef DEBUG
           printf("    - EX:tobranch?: %d %d %ld==0x%lx\n",toBranch(_e_b_op,_e_odata),_e_b_op,_e_odata,(uint64_t)_e_odata);
@@ -1887,11 +2068,13 @@ int CPU::EX(){
           #ifdef DEBUG
           printf(" - EX: branch prediction wrong. recovering to PC=0x%lx\n",_e_pc_recover);
           #endif
+          statsInc(b_pred_err);
           wrongPred(_e_pc_recover);
         }else{
           #ifdef DEBUG
           printf(" - EX: branch prediction correct.\n");
           #endif
+          statsInc(b_pred_crt);
           correctPred();
           }
       }
@@ -1914,10 +2097,12 @@ int CPU::MEM(){
       _m_st = READY;
 
       _m_odata = _m_rd = _m_opcode = 0;
-    #ifdef DEBUG
-    strcpy(instr[MW_D],instr[MEM_D]);
+      
+    if(verbose)
+      strcpy(instr[MW_D],instr[MEM_D]);
+    
     sprintf(instr[MEM_D],"\n");
-    #endif
+    
     }
   }
   if(_m_st == READY){
@@ -1928,10 +2113,10 @@ int CPU::MEM(){
       _em_valid = false;
       simClocksToFinish(_m_clk,CLK_ONE);
       _m_st = TICKING;
-      #ifdef DEBUG
+      
       sprintf(instr[MEM_D],"Bubble\n");
       sprintf(instr[EM_D],"\n");
-      #endif
+      
     }else{
       if(_em_valid){
         _m_idata = _em_data2;
@@ -1944,10 +2129,11 @@ int CPU::MEM(){
         _em_valid = FALSE; // invalidate the former data
         _em_data2= _em_data= _em_rd = _em_mem_op = _em_operand_type = _em_opcode = 0;
 
-        #ifdef DEBUG
-        strcpy(instr[MEM_D],instr[EM_D]);
+        if(verbose)
+          strcpy(instr[MEM_D],instr[EM_D]);
+        
         sprintf(instr[EM_D],"\n");
-        #endif
+        
         
         #ifdef DEBUG
         if(_m_mem_op != NOP){
@@ -1961,6 +2147,7 @@ int CPU::MEM(){
         switch(_m_mem_op){
           case MREAD:{
             memcpy(&_m_odata, &memory->mem[(uint64_t)_m_addr], sizeof(uint64_t));
+            mem_read ++;
             switch(_m_operand_type){
               case BYTE: _m_odata = signExtend(_m_odata, 8); break;
               case HALF: _m_odata = signExtend(_m_odata, 16);break;
@@ -1988,7 +2175,7 @@ int CPU::MEM(){
               default: printf(" store type error!\n"); return ERROR;
             }
             memcpy( &memory->mem[(uint64_t)_m_addr],&_m_idata, store_size);
-
+            mem_write ++;
             #ifdef DEBUG
             printf(" - MEM: store data: 0x%lx at addr: 0x%lx\n",(uint64_t)_m_idata,(uint64_t)_m_addr);
             #endif
@@ -2039,7 +2226,8 @@ int CPU::WB(){
         #ifdef DEBUG
         printf(" - WB: write nothing\n");
         #endif
-      }
+      }        
+      
     }
     _w_st = READY;
   }
@@ -2049,16 +2237,17 @@ int CPU::WB(){
       _w_bub = _mw_bub ;
       _mw_bub = false;
       _mw_valid = false;
-      #ifdef DEBUG
+      
       sprintf(instr[WB_D],"Bubble\n");
       sprintf(instr[MW_D],"\n");
-      #endif
+      
     }else{
       if(_mw_valid){
-        #ifdef DEBUG
-        strcpy(instr[WB_D],instr[MW_D]);
+        if(verbose)
+          strcpy(instr[WB_D],instr[MW_D]);
+        
         sprintf(instr[MW_D],"\n");
-        #endif
+        
         _w_rd = _mw_rd;
         _w_data = _mw_data;
         _w_opcode = _mw_opcode;
@@ -2076,7 +2265,17 @@ int CPU::WB(){
       _w_st = DONE;
       if(_w_opcode == OP_ECALL){
         _fd_stall = false;
-        if( this->regfile->greg[A7]==1) return HALT;
+        _fetch_bub = false;
+        _fd_bub = _de_bub = _em_bub = _mw_bub = true;
+        _f_bub = _d_bub = _e_bub = _m_bub = true;
+        this->pc = _pc_from_ecall;
+        _pc_from_ecall = 0;
+        switch(this->regfile->greg[A7]){
+          case 1: return HALT;break;
+          case 2: printf("%s",(char*)&this->memory->mem[this->regfile->greg[A0]]);break;
+          case 3: printf("%ld ",(long long int)this->regfile->greg[A0]);break;
+          default: break;
+        }
       }
     }
   }

@@ -13,5 +13,6 @@ int cal_n(int i)
 int main()  
 {
 	result=cal_n(10);
+  Print_d(result);
 	Exit();
 }  

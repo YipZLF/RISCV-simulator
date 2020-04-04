@@ -25,5 +25,8 @@ int main()
 	for(int i=40;i>=1;i--)
 		result[i]=i;
 	qsort(0,39);
+  
+	for(int i=40;i>=1;i--)
+		Print_d(result[i]);
 	Exit();
 }  

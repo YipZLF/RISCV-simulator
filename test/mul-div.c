@@ -7,9 +7,13 @@ int result[10]={1,2,3,4,5,2,4,6,8,10};
 int main()
 {
 	int i=0;
-	for(i=0;i<5;i++)
+	for(i=0;i<5;i++){
 		result[i]=result[i]*5;
-	for(i=5;i<10;i++)
+    Print_d(result[i]);
+  }
+	for(i=5;i<10;i++){
 		result[i]=result[i]/2;
-	Exit();
+    Print_d(result[i]);
+  }
+  Exit();
 }

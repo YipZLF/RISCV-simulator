@@ -1,4 +1,4 @@
-#include "lib.h"
+#include"lib.h"
 
 int result[10]={1,2,3,4,5,6,7,8,9,10};
 
@@ -7,14 +7,18 @@ int result[10]={1,2,3,4,5,6,7,8,9,10};
 void fuction()
 {
 	int i=0;
-	for(i=0;i<5;i++)
+	for(i=0;i<5;i++){
 		result[i]=result[i]+10;
-	for(i=5;i<10;i++)
+    Print_d(result[i]);
+  }
+	for(i=5;i<10;i++){
 		result[i]=result[i]-5;
+    Print_d(result[i]);
+  }
 }
 
 int main()
 {
 	fuction();
-	Exit();
+  Exit();
 }

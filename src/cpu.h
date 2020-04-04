@@ -28,13 +28,23 @@ class CPU{
   int MEM();
   int WB();
   uint64_t branchPred(uint64_t pc_next,uint64_t pc_branch,uint64_t &pc_recover,bool &taken){
-    /*always taken*/
+    
+    //always taken
     #ifdef DEBUG
     printf("    - IF: branch prediction: taken.\n");
     #endif
     taken = true;
     pc_recover = pc_next;
     return pc_branch; 
+    
+/*
+    //always not taken
+    #ifdef DEBUG
+    printf("    - IF: branch prediction: not taken.\n");
+    #endif
+    taken = false;
+    pc_recover = pc_branch;
+    return pc_next; */
   }
   void wrongPred(uint64_t pc_recover){
     _f_bub = _fd_bub = _e_bub =  _de_bub = true;
@@ -46,9 +56,11 @@ class CPU{
   bool hasPredicted(int b_op){
     return (b_op & 0x1);// b_op that needed prediction is encoded with odd number.
   }
-/* Internal CPU states register*/
+  bool hzdDetect(int rs,int64_t & s);
 
+/* Internal CPU states register*/
 bool _fetch_bub;
+uint64_t _pc_from_ecall;
 
 bool _f_stall,_f_bub,_f_taken;
 int _f_st, _f_clk,_f_rs1;
@@ -96,176 +108,6 @@ int _w_st, _w_clk;
 int64_t _w_data;
 int _w_rd,_w_opcode;
 
-
-
-
-bool hzdDetect(int rs,int64_t & s){
-  #ifdef DEBUG
-  printf("    - HzdDect: rs = %d\n",rs);
-  #endif
-  if(rs == ZERO){
-    #ifdef DEBUG
-    printf("    - HzdDect: fwd ZERO\n");
-    #endif
-    s = 0; return true;
-  }
-  if(rs == _de_rd && _de_valid){ 
-    switch(_de_opcode){
-      case OP_JALR:
-      case OP_UJ:
-      case OP_AUIPC:
-      case OP_LUI: {
-        s = _de_data; 
-        #ifdef DEBUG
-        printf("    - HzdDect: fwd _de_data %lx \n",_de_data);
-        #endif
-        return true;
-        break;}
-      default: return false;
-    }
-  }
-  if( rs == _e_rd ){
-    switch(_e_opcode){
-      case OP_JALR:
-      case OP_UJ:
-      case OP_AUIPC:
-      case OP_LUI:{
-        s = _e_idata;
-        #ifdef DEBUG
-        printf("    - HzdDect: fwd _e_idata %lx \n",_e_idata);
-        #endif
-        return true;
-      }
-      case OP_R:
-      case OP_R_W:
-      case OP_IMM:
-      case OP_IMM_W:{
-        if(_e_st == DONE){
-          s = _e_odata;
-          #ifdef DEBUG
-          printf("    - HzdDect: fwd _e_odata %lx \n",_e_odata);
-          #endif
-          return true; // s is ready
-        }else{
-          #ifdef DEBUG
-          printf("    - HzdDect: with _e_odata but not ready\n");
-          #endif
-          return false;
-        }
-      }
-      default:{          
-        #ifdef DEBUG
-        printf("    - HzdDect: wait till mem\n");
-        #endif
-        return false;
-      }
-    }
-  }
-  if( rs == _em_rd && _em_valid){
-    switch(_em_opcode){
-      case OP_JALR:
-      case OP_UJ:
-      case OP_AUIPC:
-      case OP_LUI:
-      case OP_R:
-      case OP_R_W:
-      case OP_IMM:
-      case OP_IMM_W:{
-        s = _em_data;
-        #ifdef DEBUG
-        printf("    - HzdDect: fwd _em_data %lx \n",_em_data);
-        #endif
-        return true;
-      }
-      case OP_LOAD:{
-        #ifdef DEBUG
-        printf("    - HzdDect: with memory read _m_odata but not ready\n");
-        #endif
-        return false;
-      }
-      case OP_STORE:{
-        printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _em_rd);
-        return false;
-      }
-      default:{          
-        #ifdef DEBUG
-        printf("    - HzdDect: wait\n");
-        #endif
-        return false;
-      }
-    }
-  }
-  if( rs == _m_rd ){
-    switch(_m_opcode){
-      case OP_JALR:
-      case OP_UJ:
-      case OP_AUIPC:
-      case OP_LUI:
-      case OP_R:
-      case OP_R_W:
-      case OP_IMM:
-      case OP_IMM_W:{
-        s = _m_odata;
-        #ifdef DEBUG
-        printf("    - HzdDect: fwd _m_odata %lx \n",_m_odata);
-        #endif
-        return true;
-      }
-      case OP_LOAD:{
-        if(_m_st == DONE){
-          s = _m_odata;
-          #ifdef DEBUG
-          printf("    - HzdDect: fwd _m_odata %lx \n",_m_odata);
-          #endif
-          return true;
-        }else{
-          #ifdef DEBUG
-          printf("    - HzdDect: with _m_odata but not ready\n");
-          #endif
-          return false;
-        }
-      }
-      case OP_STORE:{
-        printf("!!!!!! ERROR! _em_rd should be ZERO but is now: %d\n", _m_rd);
-        return false;
-      }
-      default:{          
-        #ifdef DEBUG
-        printf("    - HzdDect: wait\n");
-        #endif
-        return false;
-      }
-    }
-  }
-  if( rs == _mw_rd && _mw_valid){// must have been ready
-    s =  _mw_data;
-    #ifdef DEBUG
-    printf("    - HzdDect: fwd _mw_data %lx \n",_mw_data);
-    #endif
-    return true;
-  }
-  if( rs == _w_rd){ //hzd detected
-    if(_w_st == DONE ){
-      s =  _w_data;
-      #ifdef DEBUG
-      printf("    - HzdDect: fwd _w_data %lx \n",_w_data);
-      #endif
-      return true;
-    }else{ // not ready
-      #ifdef DEBUG
-      printf("    - HzdDect: with _m_odata but not ready\n");
-      #endif
-      return false;
-    }
-  }
-  // no hzd
-  s = this->regfile->greg[rs];
-  #ifdef DEBUG
-  printf("    - HzdDect: no hzd, read %lx from greg\n",(uint64_t)s);
-  #endif
-  return true;
-}
-
 public:
   // MEM
   Memory * memory;
@@ -280,10 +122,10 @@ public:
     _fetch_bub = false;
     _fd_bub = _de_bub = _em_bub = _mw_bub = true;
     _f_st = _d_st = _e_st = _m_st = _w_st = READY;
-    #ifdef DEBUG
-    for(int i = 0; i < 8;++i)
-      sprintf(instr[i],"\n");
-    #endif
+    if(verbose){
+      for(int i = 0; i < 8;++i)
+        sprintf(instr[i],"\n");
+    }
   }
   ~CPU(){
     delete regfile;
@@ -300,22 +142,34 @@ public:
     void printReg(){
 
       printf("-------Reg file stage---------\n");
-      for(int i = 0 ;i < REG_CNT ;i+=4){
-        printf(" x%d: 0x%lx\t x%d: 0x%lx\t x%d: 0x%lx\t x%d: 0x%lx\n",
-        i,regfile->greg[i],i+1,regfile->greg[i+1],i+2,regfile->greg[i+2],i+3,regfile->greg[i+3]);
-      }
+      printf(" x0(zero) 0x%lx\t x1(ra): 0x%lx\t x2(sp): 0x%lx\t x3(gp): 0x%lx\n",
+        regfile->greg[0],regfile->greg[1],regfile->greg[2],regfile->greg[3]);
+      printf(" x4(tp) 0x%lx\t x5(t0): 0x%lx\t x6(t1): 0x%lx\t x7(t2): 0x%lx\n",
+        regfile->greg[4],regfile->greg[5],regfile->greg[6],regfile->greg[7]);
+      printf(" x8(s0) 0x%lx\t x9(s1): 0x%lx\t x10(a0): 0x%lx\t x11(a1): 0x%lx\n",
+        regfile->greg[8],regfile->greg[9],regfile->greg[10],regfile->greg[11]);
+      printf(" x12(a2) 0x%lx\t x13(a3): 0x%lx\t x14(a4): 0x%lx\t x15(a5): 0x%lx\n",
+        regfile->greg[12],regfile->greg[13],regfile->greg[14],regfile->greg[15]);
+      printf(" x16(a6) 0x%lx\t x17(a7): 0x%lx\t x18(s2): 0x%lx\t x19(s19): 0x%lx\n",
+        regfile->greg[16],regfile->greg[17],regfile->greg[18],regfile->greg[19]);
+      printf(" x20(s4) 0x%lx\t x21(s5): 0x%lx\t x22(s6): 0x%lx\t x23(s7): 0x%lx\n",
+        regfile->greg[20],regfile->greg[21],regfile->greg[22],regfile->greg[23]);
+      printf(" x24(s8) 0x%lx\t x25(s9): 0x%lx\t x26(s10): 0x%lx\t x27(s11): 0x%lx\n",
+        regfile->greg[24],regfile->greg[25],regfile->greg[26],regfile->greg[27]);
+      printf(" x28(t3) 0x%lx\t x29(t4): 0x%lx\t x30(t5): 0x%lx\t x31(t6): 0x%lx\n",
+        regfile->greg[28],regfile->greg[29],regfile->greg[30],regfile->greg[31]);
       printf("------------------------------\n\n");
     }
     void printPL(){
       printf("-------Pipeline stage---------\n");
       printf(" - IF = %s: %s",pl_st[_f_st],instr[IF_D]);
-      printf("  - fd v=%d b=%d st=%d: pc:0x%lx, instr:0x%x\n",_fd_valid,_fd_bub,_fd_stall, _fd_pc,_fd_instr);
+      printf("  - fd [VALID=%d BUBBLE=%d STALL=%d]: pc:0x%lx, instr:0x%x\n",_fd_valid,_fd_bub,_fd_stall, _fd_pc,_fd_instr);
       printf(" - ID = %s: %s",pl_st[_d_st],instr[ID_D]);
-      printf("  - de v=%d b=%d st=%d: %s",_de_valid,_de_bub,_de_stall,instr[DE_D]);
+      printf("  - de [VALID=%d BUBBLE=%d STALL=%d]: %s",_de_valid,_de_bub,_de_stall,instr[DE_D]);
       printf(" - EX = %s: %s",pl_st[_e_st],instr[EX_D]);
-      printf("  - em v=%d b=%d st=%d: %s",_em_valid,_em_bub,_em_stall,instr[EM_D]);
+      printf("  - em [VALID=%d BUBBLE=%d STALL=%d]: %s",_em_valid,_em_bub,_em_stall,instr[EM_D]);
       printf(" - MEM = %s: %s",pl_st[_m_st],instr[MEM_D]);
-      printf("  - mw v=%d b=%d st=%d: %s",_mw_valid,_mw_bub,_mw_stall,instr[MW_D]);
+      printf("  - mw [VALID=%d BUBBLE=%d STALL=%d]: %s",_mw_valid,_mw_bub,_mw_stall,instr[MW_D]);
       printf(" - WB = %s: %s",pl_st[_w_st],instr[WB_D]);
     }
   const char pl_st[5][10] = {"","RDY","DNE","TCK","STL"};

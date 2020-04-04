@@ -64,7 +64,6 @@ int loadELF(CPU* cpu, FILE* elf_file){
   //assign heap pointer;
   cpu->setStackPtr(MEMORY_SIZE);//assign stack pointer;
   cpu->setEntry(elf_hdr.e_entry);//set entry point;
-  printf("CPU pc:%lx\n",elf_hdr.e_entry);
   fclose(elf_file);
   return 0;
 }
