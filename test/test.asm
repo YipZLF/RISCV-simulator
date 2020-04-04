@@ -1,24 +1,25 @@
 .section .text
 .globl _start
 _start:
-    addi	a0,gp,-1
-    addi	a1,gp,-2
-    addi	a2,gp,-3
-    addi	a3,gp,-4
-    addi	a4,gp,-5
-    addi	a5,gp,-6
-    addi	a6,gp,-7
-    addi	a0,gp,-1
-    addi	a1,gp,-2
-    addi	a2,gp,-3
-    addi	a3,gp,-4
-    addi	a4,gp,-5
-    addi	a5,gp,-6
-    addi	a6,gp,-7
-    addi	a0,gp,-1
-    addi	a1,gp,-2
-    addi	a2,gp,-3
-    addi	a3,gp,-4
-    addi	a4,gp,-5
-    addi	a5,gp,-6
-    addi	a6,gp,-7
+    auipc gp,2
+    addi	a0,gp,1
+    addi	a1,a0,2
+    addi	a2,a1,3
+    addi	a3,a2,4
+    addi	a4,a3,5
+    addi	a5,a4,6
+    addi	a6,a5,7
+    addi	a0,gp,8
+    addi	a1,gp,9
+    addi	a2,gp,10
+    addi	a3,gp,11
+    addi	a4,gp,12
+    addi	a5,gp,13
+    addi	a6,gp,14
+    addi	a0,gp,15
+    addi	a1,gp,16
+    addi	a2,gp,17
+    addi	a3,gp,18
+    addi	a4,gp,19
+    addi	a5,gp,20
+    addi	a6,gp,21
