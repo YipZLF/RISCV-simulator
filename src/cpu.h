@@ -21,7 +21,7 @@ class CPU{
   unsigned int cpu_status,clocks_to_finish;
   uint64_t  pc;
 
-  
+  bool verbose;
   int IF();
   int ID();
   int EX();
@@ -36,8 +36,6 @@ class CPU{
     pc_recover = pc_next;
     return pc_branch; 
   }
-  std::deque<uint64_t> pc_recover;
-  std::deque<bool> is_b_taken_pred;
   void wrongPred(uint64_t pc_recover){
     _f_bub = _fd_bub = _e_bub =  _de_bub = true;
     pc = pc_recover;
@@ -52,7 +50,7 @@ class CPU{
 
 bool _fetch_bub;
 
-bool _f_b_pred_error,_f_jalr,_f_stall,_f_bub,_f_taken;
+bool _f_stall,_f_bub,_f_taken;
 int _f_st, _f_clk,_f_rs1;
 uint64_t _f_pc,_f_pc_recover;
 int64_t _f_offset,_f_s1;
@@ -272,7 +270,8 @@ public:
   // MEM
   Memory * memory;
   RegFile* regfile;
-  CPU(){
+  CPU(bool _verbose = false){
+    verbose = _verbose;
     regfile = new RegFile;
     alu = new ALU;
     memory = new Memory;
@@ -293,10 +292,10 @@ public:
   }
   uint64_t setEntry(uint64_t addr){return pc = addr;}
   uint64_t setStackPtr(uint64_t addr){return regfile->greg[SP] = addr;}
+  uint64_t getPC(){return pc;}
   int step();
   int pl_step();
 
-  #ifdef DEBUG
   public:
     void printReg(){
 
@@ -321,6 +320,5 @@ public:
     }
   const char pl_st[5][10] = {"","RDY","DNE","TCK","STL"};
   char instr[8][40];
-  #endif
 };
 #endif

@@ -184,7 +184,6 @@ typedef long int int64_t;
 #define CLK_ONE 1
 
 
-#ifdef DEBUG
 
 #define IF_D 0
 #define ID_D 1
@@ -195,7 +194,6 @@ typedef long int int64_t;
 #define EM_D 6
 #define MW_D 7
 
-#endif
 
 
 #endif

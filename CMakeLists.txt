@@ -10,10 +10,10 @@ set( EXECUTABLE_OUTPUT_PATH "./bin" )
 INCLUDE_DIRECTORIES( ${PROJECT_SOURCE_DIR}/src)
 
 
-option(DEBUG_MODE "Activate DEBUG mode." ON)
+option(DEBUG_MODE "Activate DEBUG mode." OFF)
 
 if(DEBUG_MODE)
-  add_definitions(-DDEBUG)
+#  add_definitions(-DDEBUG)
 endif(DEBUG_MODE)
 
 aux_source_directory(./src SRCS)

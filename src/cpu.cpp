@@ -1885,7 +1885,7 @@ int CPU::EX(){
         bool _e_toBranch = toBranch(_e_b_op,_e_odata);
         if(_e_toBranch != _e_taken){ // wrong prediction
           #ifdef DEBUG
-          printf(" - EX: branch prediction wrong. recovering to PC=0x%lx\n",pc_recover.front());
+          printf(" - EX: branch prediction wrong. recovering to PC=0x%lx\n",_e_pc_recover);
           #endif
           wrongPred(_e_pc_recover);
         }else{
