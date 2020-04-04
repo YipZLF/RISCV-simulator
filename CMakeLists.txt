@@ -7,11 +7,12 @@ set(EXECUTABLE_OUTPUT_PATH "./bin" )
 
 project(riscv_sim)
 
+configure_file(simClkConfig.h.in ../src/simClkConfig.h)
 
 INCLUDE_DIRECTORIES( ${PROJECT_SOURCE_DIR}/src)
 
 
-option(DEBUG_MODE "Activate DEBUG mode." ON)
+option(DEBUG_MODE "Activate DEBUG mode." OFF)
 
 if(DEBUG_MODE)
   add_definitions(-DDEBUG)

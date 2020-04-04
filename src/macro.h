@@ -10,6 +10,7 @@
 #include<cstring>
 #include<string>
 #include<queue>
+#include "simClkConfig.h"
 
 typedef unsigned int uint_t;
 typedef unsigned long int uint64_t;
@@ -173,19 +174,11 @@ typedef long int int64_t;
 #define simClocksToFinish(stage,simcycles) (stage = simcycles)
 #define simTick(simcycles) (simcycles-=1)
 #define simTickDone(simcycles) (simcycles==0)
-#define simTickNotDone(simcycles) (simcycles>0)
-#define CLK_IF 1
-#define CLK_ID 1
-#define CLK_S_OP 1
-#define CLK_M_OP 2
-#define CLK_L_OP 4
-#define CLK_WB 1
-#define CLK_MEM 2
-#define CLK_ONE 1
 
 //statistic
 #define statsInc(x) (x += 1)
 
+// verbose information
 #define IF_D 0
 #define ID_D 1
 #define EX_D 2

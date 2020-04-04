@@ -862,9 +862,15 @@ int CPU::step(){
       #ifdef DEBUG
       printf(" - ID: ecall\n");
       #endif
-      if( cur_instr!= 0x73 ) return -1;
-      if( this->regfile->greg[A7]==1) return -2;
-
+      if( cur_instr!= 0x73 ) return ERROR;
+      switch(this->regfile->greg[A7]){
+        case 1: return HALT;break;
+        case 2: printf("%s",(char*)&this->memory->mem[this->regfile->greg[A0]]);break;
+        case 3: printf("%lld ",(long long int)this->regfile->greg[A0]);break;
+        default: break;
+      }
+      pc = pc_next;
+      return 0;
       break;
     }
     default: { 
@@ -1105,7 +1111,7 @@ int CPU::IF(){
           this->pc = _pc_next;
           _fetch_bub = true;
           #ifdef DEBUG
-          printf("   - IF: JALR:insert bubble to next IF\n",pc);
+          printf("   - IF: JALR:insert bubble to next IF\n");
           #endif 
 
           break;
@@ -1201,7 +1207,7 @@ int CPU::ID(){
       printf("    - ID: at 0x%lx fetched 0x%x \n",_d_pc,_d_instr);
       #endif
 
-      if(_d_instr==0) printf(" - ID: failure when decoding 0x%lx\n",_d_instr);
+      if(_d_instr==0) printf(" - ID: failure when decoding 0x%x\n",_d_instr);
       
       _d_opcode = getBits(_d_instr,0,6);
       uint_t funct3 = 0,funct7 = 0;
@@ -2012,29 +2018,29 @@ int CPU::EX(){
         
 
         switch(_e_alu_op){
-          case ALU_ADD: _e_odata = (int64_t)_e_s1 + (int64_t)_e_s2;simClocksToFinish(_e_clk,CLK_S_OP); break;
-          case ALU_SUB: _e_odata = (int64_t)_e_s1 - (int64_t)_e_s2;simClocksToFinish(_e_clk,CLK_S_OP); break;
-          case ALU_SUB_U: _e_odata = (uint64_t)_e_s1 - (uint64_t)_e_s2;simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_ADD: _e_odata = (int64_t)_e_s1 + (int64_t)_e_s2;simClocksToFinish(_e_clk,CLK_ADD_OP); break;
+          case ALU_SUB: _e_odata = (int64_t)_e_s1 - (int64_t)_e_s2;simClocksToFinish(_e_clk,CLK_ADD_OP); break;
+          case ALU_SUB_U: _e_odata = (uint64_t)_e_s1 - (uint64_t)_e_s2;simClocksToFinish(_e_clk,CLK_ADD_OP);break;
           case ALU_MUL: {
             __int128_t tmp = _e_s1* _e_s2;
             _e_odata = tmp & 0xffffffffffffffff; 
-            simClocksToFinish(_e_clk,CLK_M_OP);
+            simClocksToFinish(_e_clk,CLK_MUL_OP);
             break;}
-          case ALU_SLL: _e_odata = _e_s1 << _e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_SLL: _e_odata = _e_s1 << _e_s2; simClocksToFinish(_e_clk,CLK_SHIFT_OP);break;
           case ALU_MULH: {
             __int128_t tmp = _e_s1* _e_s2;
             _e_odata = tmp >> 64; 
-            simClocksToFinish(_e_clk,CLK_M_OP);
+            simClocksToFinish(_e_clk,CLK_MUL_OP);
             break;}
-          case ALU_SLT: _e_odata = ((int64_t)_e_s1 < (int64_t)_e_s2)? 1: 0; simClocksToFinish(_e_clk,CLK_S_OP);break;
-          case ALU_XOR: _e_odata = _e_s1 ^ _e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
-          case ALU_DIV: _e_odata = _e_s1 / _e_s2; simClocksToFinish(_e_clk,CLK_L_OP);break;
-          case ALU_SRL: _e_odata = (uint64_t)_e_s1 >> (int64_t)_e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
-          case ALU_SRA: _e_odata = (int64_t) _e_s1 >> (int64_t)_e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
-          case ALU_OR: _e_odata = _e_s1 | _e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
-          case ALU_REM: _e_odata = _e_s1 % _e_s2; simClocksToFinish(_e_clk,CLK_L_OP);break;
-          case ALU_AND: _e_odata = _e_s1 & _e_s2; simClocksToFinish(_e_clk,CLK_S_OP);break;
-          case NOP: _e_odata = _e_idata; simClocksToFinish(_e_clk,CLK_S_OP);break;
+          case ALU_SLT: _e_odata = ((int64_t)_e_s1 < (int64_t)_e_s2)? 1: 0; simClocksToFinish(_e_clk,CLK_ADD_OP);break;
+          case ALU_XOR: _e_odata = _e_s1 ^ _e_s2; simClocksToFinish(_e_clk,CLK_XOR_OP);break;
+          case ALU_DIV: _e_odata = _e_s1 / _e_s2; simClocksToFinish(_e_clk,CLK_DIV_OP);break;
+          case ALU_SRL: _e_odata = (uint64_t)_e_s1 >> (int64_t)_e_s2; simClocksToFinish(_e_clk,CLK_SHIFT_OP);break;
+          case ALU_SRA: _e_odata = (int64_t) _e_s1 >> (int64_t)_e_s2; simClocksToFinish(_e_clk,CLK_SHIFT_OP);break;
+          case ALU_OR: _e_odata = _e_s1 | _e_s2; simClocksToFinish(_e_clk,CLK_OR_OP);break;
+          case ALU_REM: _e_odata = _e_s1 % _e_s2; simClocksToFinish(_e_clk,CLK_REM_OP);break;
+          case ALU_AND: _e_odata = _e_s1 & _e_s2; simClocksToFinish(_e_clk,CLK_AND_OP);break;
+          case NOP: _e_odata = _e_idata; simClocksToFinish(_e_clk,CLK_ONE);break;
           default: 
             printf("ALU op error!"); return ERROR;
           }
@@ -2054,7 +2060,7 @@ int CPU::EX(){
         _f_bub = _fd_bub = _e_bub =  _de_bub = true;
         this->pc = _e_odata;
         #ifdef DEBUG
-        printf(" - EX: JALR: fwd %x to pc.\n",_e_odata);
+        printf(" - EX: JALR: fwd %x to pc.\n",(unsigned)_e_odata);
         #endif
       }
       if(_e_b_op != NOP && !_e_b_check && hasPredicted(_e_b_op) ){// deal with branch prediction
@@ -2273,7 +2279,7 @@ int CPU::WB(){
         switch(this->regfile->greg[A7]){
           case 1: return HALT;break;
           case 2: printf("%s",(char*)&this->memory->mem[this->regfile->greg[A0]]);break;
-          case 3: printf("%ld ",(long long int)this->regfile->greg[A0]);break;
+          case 3: printf("%lld ",(long long int)this->regfile->greg[A0]);break;
           default: break;
         }
       }

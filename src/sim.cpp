@@ -97,7 +97,7 @@ int main(int argc, char ** argv){
         if(c[0]=='?'||c[0]=='h'){//help
           printf("Single step mode:\n");
           printf(" h, ?: print this help information\n");
-          printf(" x: show memory\n   - usage: x [address]\n");
+          printf(" x: show memory\n   - usage: x [address in HEX]\n");
           printf(" r: show register\n   - usage: r [reg index]\n");
           printf(" p: show pc value\n   - usage: p\n");
           printf(" s: show statistics so far\n  - usage: s\n");
@@ -105,11 +105,11 @@ int main(int argc, char ** argv){
           printf(" q: quit single step. run without stopping.\n");
         }else if(c[0]=='x'){
           uint64_t addr;
-          scanf("%x",&addr);
-          printf("%x\n",addr);
-          printf(" 0x%x : %lx\n",addr, *(uint64_t *)&cpu->memory->mem[addr]);
+          scanf("%lx",&addr);
+          printf("%lx\n",addr);
+          printf(" 0x%lx : %lx\n",addr, *(uint64_t *)&cpu->memory->mem[addr]);
         }else if(c[0]== 'r'){
-          uint64_t reg;
+          int reg;
           scanf("%d",&reg);
           printf(" reg x%d : %lx\n",reg, *(uint64_t *)&cpu->regfile->greg[reg]);
         }else if(c[0]== 'p'){
@@ -125,6 +125,7 @@ int main(int argc, char ** argv){
       }
     }
   }
-  printStats();
+  if(use_pl)
+    printStats();
   return 0;
 }
